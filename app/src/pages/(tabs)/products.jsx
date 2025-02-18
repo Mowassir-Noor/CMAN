@@ -9,6 +9,15 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import { SearchBar } from '@rneui/themed';
 import ProductCard from '../../components/ProductCard';
 
+// Add this utility function at the top of the file
+function debounce(func, wait) {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
 const Products = () => {
   const [state, setState] = React.useState({ open: false });
 
@@ -25,27 +34,57 @@ const Products = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [isRefetchError, setIsRefetchError] = useState(false);
 
-  const fetchAllProducts = async (pageNumber = 1) => {
+  const fetchAllProducts = async (pageNumber = 1, search = '') => {
     if (!hasMore && pageNumber !== 1) return;
-    setIsLoading(true);
+    
+    if (pageNumber === 1) {
+      setSearchLoading(true);
+      setIsRefetchError(false); // Reset error state on new fetch
+    } else {
+      setIsLoading(true);
+    }
   
     try {
-      const response = await axiosInstance.get(`products?page=${pageNumber}`);
-      const newProducts = response.data.data.products; // Ensure this is the correct structure
-  
+      const response = await axiosInstance.get(`products?page=${pageNumber}&name=${search}`);
+      const newProducts = response.data.data.products;
+      const isLastPage = newProducts.length < 10;
+      
       setProducts(prevProducts => 
         pageNumber === 1 ? newProducts : [...prevProducts, ...newProducts]
       );
   
-      setHasMore(newProducts.length > 0);
+      setHasMore(!isLastPage);
       setPage(pageNumber);
     } catch (error) {
-      console.error('Error fetching products', error);
+      console.error('Error fetching products:', error);
+      setHasMore(false);
+      setIsRefetchError(true);
+      if (pageNumber === 1) {
+        setProducts([]); // Clear products on error for first page
+      }
     } finally {
       setIsLoading(false);
+      setSearchLoading(false);
       setRefreshing(false);
     }
+  };
+
+  // Add debounced search function
+  const debouncedSearch = React.useCallback(
+    debounce((searchText) => {
+      setPage(1);
+      fetchAllProducts(1, searchText);
+    }, 500),
+    []
+  );
+
+  // Update search handler
+  const handleSearch = (text) => {
+    setSearchQuery(text);
+    debouncedSearch(text);
   };
 
   const onRefresh = () => {
@@ -55,12 +94,13 @@ const Products = () => {
   };
 
   const loadMoreProducts = () => {
-    if (!hasMore || loading) return;  // Prevent multiple calls
-    fetchAllProducts(page + 1);
+    if (!hasMore || loading || searchLoading) return;
+    console.log('Loading more products, page:', page + 1);
+    fetchAllProducts(page + 1, searchQuery);
   };
 
   useEffect(() => {
-    fetchAllProducts();
+    fetchAllProducts(1, searchQuery);
   }, []);
 
   const handleDelete = async (productId) => {
@@ -125,9 +165,14 @@ const Products = () => {
           inputStyle={{ color: 'white' }}
           placeholder="Search products..."
           placeholderTextColor="#9ca3af"
-          onChangeText={text => setSearchQuery(text)}
+          onChangeText={handleSearch}
           value={searchQuery}
           round={true}
+          showLoading={searchLoading}
+          onClear={() => {
+            setSearchQuery('');
+            fetchAllProducts(1, '');
+          }}
         />
       </View>
 
@@ -137,20 +182,59 @@ const Products = () => {
         renderItem={renderItem}
         refreshControl={
           <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh}
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              setPage(1);
+              setHasMore(true);
+              fetchAllProducts(1, searchQuery);
+            }}
             tintColor="#7c3aed"
+            colors={["#7c3aed"]}
+            progressBackgroundColor="#1f2937"
           />
         }
-        onEndReached={loadMoreProducts}
-        onEndReachedThreshold={0.1}
-        contentContainerStyle={{ paddingVertical: 16 }}
+        onEndReached={() => {
+          if (!loading && !searchLoading && hasMore) {
+            loadMoreProducts();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        contentContainerStyle={{ 
+          paddingVertical: 16,
+          flexGrow: 1, // This ensures the empty state is centered
+          ...(products.length === 0 && { justifyContent: 'center' })
+        }}
         showsVerticalScrollIndicator={false}
-        ListFooterComponent={loading && (
-          <View className="py-4">
-            <ActivityIndicator color="#7c3aed" />
-          </View>
-        )}
+        ListFooterComponent={
+          loading && !refreshing && (
+            <View className="py-4">
+              <ActivityIndicator color="#7c3aed" />
+            </View>
+          )
+        }
+        ListEmptyComponent={
+          !loading && !searchLoading && (
+            <View className="flex-1 items-center p-4">
+              {isRefetchError ? (
+                <>
+                  <MaterialIcons name="error-outline" size={48} color="#ef4444" />
+                  <Text className="text-red-500 text-lg mt-2">Failed to load products</Text>
+                  <TouchableOpacity 
+                    className="mt-4 bg-purple-600 px-4 py-2 rounded-full"
+                    onPress={() => fetchAllProducts(1, searchQuery)}
+                  >
+                    <Text className="text-white">Try Again</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <Text className="text-white text-lg">
+                  {searchQuery ? 'No matching products found' : 'No products available'}
+                </Text>
+              )}
+            </View>
+          )
+        }
       />
       
       <FAB.Group
