@@ -5,7 +5,8 @@ import {
   FlatList,
   Alert,
   Text,
-  ScrollView
+  ScrollView,
+  TouchableOpacity
 } from 'react-native'
 import { Button } from 'react-native-paper'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
@@ -23,6 +24,7 @@ import CustomTextInput from '../../components/CustomTextInput'
 import axiosInstance from '../../utils/axiosInstance'
 import * as SecureStore from 'expo-secure-store'
 import { Dropdown } from 'react-native-element-dropdown'
+import { MaterialIcons } from '@expo/vector-icons'
 
 export default function Home () {
   const { user, login, logout, loading } = useAuth()
@@ -132,6 +134,17 @@ export default function Home () {
     )
   }
 
+  const renderAddButton = () => (
+    <TouchableOpacity 
+      onPress={handlePickImages}
+      className="ml-2 border-2 border-dashed border-gray-600 rounded-xl p-8 items-center justify-center bg-gray-800/30 h-[200px] w-[200px]"
+    >
+      <MaterialIcons name="add-photo-alternate" size={40} color="#666" />
+      <Text className="text-gray-400 mt-2">Add More</Text>
+      <Text className="text-gray-500 text-xs mt-1">Images</Text>
+    </TouchableOpacity>
+  );
+
   const handleSubmit = () => {
     const newFormData = new FormData()
     newFormData.append('name', productDetails.productName)
@@ -192,27 +205,16 @@ export default function Home () {
         <ScrollView>
           <View backgroundColor='black'>
             <FlatList
-              data={selectedImages}
-              renderItem={renderItem}
+              data={[...selectedImages, { isAddButton: true }]}
+              renderItem={({ item, index }) => 
+                item.isAddButton ? renderAddButton() : renderItem({ item, index })
+              }
               keyExtractor={(item, index) => item.uri || index.toString()}
               horizontal={true}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingVertical: 10 }}
               className='mt-4'
             />
-          </View>
-          <View
-            className='items-center justify-center mt-4'
-            backgroundColor='black'
-          >
-            <Button
-              mode='contained'
-              buttonColor='purple'
-              onPress={handlePickImages}
-              icon={'image-multiple'}
-            >
-              Add Images
-            </Button>
           </View>
 
           <View
