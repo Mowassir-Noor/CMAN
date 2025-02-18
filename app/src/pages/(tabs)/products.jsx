@@ -1,25 +1,20 @@
-import { View, SafeAreaView, FlatList, RefreshControl, ActivityIndicator, Text } from 'react-native';
-import {  ProgressBar } from 'react-native-paper';
+import { View, SafeAreaView, FlatList, RefreshControl, ActivityIndicator, Text, StatusBar, TouchableOpacity, Image, Alert } from 'react-native';
+import { ProgressBar, FAB, Portal, PaperProvider } from 'react-native-paper';
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../../api/axiosInstance';
-import ProductCard from '../../components/ProductCard';
-import { SearchBar } from '@rneui/themed';
-import { BlurView } from 'expo-blur';
-// import { FAB } from '@rneui/themed';
-import { Link, router } from 'expo-router';
-import { FAB, Portal, PaperProvider } from 'react-native-paper';
+import { MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { icons } from '../../constants';
-// import { SearchBar } from 'react-native-elements';
-// import {SearchBar} from 'react-native-paper';
+import Animated, { FadeInRight } from 'react-native-reanimated';
+import { SearchBar } from '@rneui/themed';
+import ProductCard from '../../components/ProductCard';
 
 const Products = () => {
- const [state, setState] = React.useState({ open: false });
+  const [state, setState] = React.useState({ open: false });
 
   const onStateChange = ({ open }) => setState({ open });
 
   const { open } = state;
-
-
 
   const [visible, setVisible] = React.useState(true);
 
@@ -31,7 +26,6 @@ const Products = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
- 
   const fetchAllProducts = async (pageNumber = 1) => {
     if (!hasMore && pageNumber !== 1) return;
     setIsLoading(true);
@@ -53,7 +47,6 @@ const Products = () => {
       setRefreshing(false);
     }
   };
-  
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -61,209 +54,129 @@ const Products = () => {
     fetchAllProducts(1);
   };
 
-  
-
   const loadMoreProducts = () => {
     if (!hasMore || loading) return;  // Prevent multiple calls
     fetchAllProducts(page + 1);
   };
-  
 
   useEffect(() => {
     fetchAllProducts();
   }, []);
-  
-  
 
+  const handleDelete = async (productId) => {
+    Alert.alert(
+      "Delete Product",
+      "Are you sure you want to delete this product?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await axiosInstance.delete(`products/${productId}`);
+              fetchAllProducts(1); // Refresh the list
+            } catch (error) {
+              console.error('Error deleting product:', error);
+              Alert.alert('Error', 'Failed to delete product');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEdit = (item) => {
+    router.push({
+      pathname: "../products/editProduct",
+      params: { productId: item._id }
+    });
+  };
+
+  const renderItem = ({ item, index }) => (
+    <ProductCard 
+      item={item}
+      index={index}
+      onDelete={handleDelete}
+      onEdit={handleEdit}
+    />
+  );
 
   return (
-
-    <SafeAreaView className="flex-1 relative">
+    <View className="flex-1 bg-black">
+      <StatusBar barStyle="light-content" />
       
-      <View>
+      {/* Header */}
+      <View className="px-4 pt-5 pb-4 bg-gray-900/80">
+        
+        {/* Original SearchBar */}
         <SearchBar
           platform="default"
-      containerStyle={{backgroundColor: 'black',paddingTop: 20}}
-      inputContainerStyle={{}}
-      inputStyle={{}}
-      leftIconContainerStyle={{}}
-      rightIconContainerStyle={{}}
-      loadingProps={{}}
-          onChangeText={newVal => setSearchQuery(newVal)}
-      onClearText={() => console.log(onClearText())}
-          placeholder="Type query here..."
-          placeholderTextColor="#888"
-      round={true}
-      cancelButtonTitle="Cancel"
-      cancelButtonProps={{}}
-      onCancel={() => console.log(onCancel())}
+          containerStyle={{ 
+            backgroundColor: 'transparent',
+            borderTopWidth: 0,
+            borderBottomWidth: 0,
+            paddingHorizontal: 0
+          }}
+          inputContainerStyle={{
+            backgroundColor: 'rgba(55, 65, 81, 0.8)',
+            borderRadius: 25
+          }}
+          inputStyle={{ color: 'white' }}
+          placeholder="Search products..."
+          placeholderTextColor="#9ca3af"
+          onChangeText={text => setSearchQuery(text)}
           value={searchQuery}
-      
+          round={true}
         />
-    
-
-
       </View>
-  
 
-  <View className="flex-1 relative">
-     
-      <View className=' bg-black w-full h-full absolute '>
-        {loading && <ProgressBar indeterminate color="purple" />}
-      
-        <FlatList
-
-        
-          data={products}
-          keyExtractor={(item) => item._id}
-          
-
-          // ******************Search query trial***********************
-
-          renderItem={({ item }) => {
-            if(searchQuery==""){
-              
-              return(
-                <ProductCard
-                  productId={item._id}
-                  imageSource={item.bannerImage}
-                  productName={item.name}
-                  productPrice={item.price}
-                  discountedPrice={item.discountedPrice}
-                  otherStyle={'pt-4'}
-                  quantity={item.quantity}
-                  availability={item.availability}
-                refreshPage={fetchAllProducts} // Pass fetchAllProducts as refreshPage
-                onDelete={fetchAllProducts} // Trigger refresh on delete
-                />
-                
-                
-
-                
-              )
-            }
-
-            // if(searchQuery!="" && searchQuery.length!=0 && ((item.name).toLowerCase()).includes(searchQuery.toLowerCase())){
-              if(searchQuery!="" && searchQuery.length!=0 && (item.name).includes(searchQuery)){
-              return(
-                <ProductCard
-                productId={item._id}
-                imageSource={item.bannerImage}
-                productName={item.name}
-                productPrice={item.price}
-                discountedPrice={item.discountedPrice}
-                otherStyle={'pt-4'}
-                quantity={item.quantity}
-                availability={item.availability}
-                refreshPage={fetchAllProducts} // Pass fetchAllProducts as refreshPage
-                onDelete={fetchAllProducts}
-                 /> // Trigger refresh on delete
-                )
-                
-                
-            }
-          }
-
-
-
-
-
-
-
-  // ******************Search query trial***********************        
-        
-          }
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          onEndReached={loadMoreProducts}
-          onEndReachedThreshold={0.1}  // Trigger pagination earlier
-          ListFooterComponent={loading && <ActivityIndicator size="large" color="#0000ff"  />}
-        
-        
-                    
+      <FlatList
+        data={products}
+        keyExtractor={(item) => item._id}
+        renderItem={renderItem}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor="#7c3aed"
           />
-          
-
-    
-          
-
-
+        }
+        onEndReached={loadMoreProducts}
+        onEndReachedThreshold={0.1}
+        contentContainerStyle={{ paddingVertical: 16 }}
+        showsVerticalScrollIndicator={false}
+        ListFooterComponent={loading && (
+          <View className="py-4">
+            <ActivityIndicator color="#7c3aed" />
+          </View>
+        )}
+      />
       
-           </View>
-
-
-
-           
-           <View className="flex-1 relative">
-        
-    {/* ------------------------------- Floating Action Button----------------------*/}
-         <PaperProvider>
-              <Portal>
-                <FAB.Group
-             
-              style={{
-          
-               
-                position: 'absolute',
-                zIndex: 1000, // Ensure FAB is always on top
-                elevation:100,
-              }}
-              color='white'
-                fabStyle={(open?{borderRadius:50,backgroundColor:'purple'}:{backgroundColor: 'purple',borderRadius:50})}
-               
-               
-                backdropColor='rgba(0, 0, 0, 0.8);' 
-                rippleColor={open?'purple':'white'} 
-                open={open}
-                  visible
-                  icon={open ? 'close' : 'plus'}
-                  actions={[
-                    { icon: icons.category, 
-                      label:"Add New Category",
-                      labelTextColor:'white',
-                      size:50,
-                      rippleColor:'purple',
-                      style:{backgroundColor:'white'},
-                      onPress: () =>router.push('../category/viewCategory'),},
-                    {
-                      icon: icons.addProduct,
-                      label: 'Add New Product',
-                      labelTextColor:'white',
-                      size:50,
-                      rippleColor:'purple',
-                      style:{backgroundColor:'white'},
-                      onPress: () => router.push('../products/addProducts'),
-                    },
-
-                    
-                  ]}
-
-                  // labelStyle={{color:'white'}}
-                  // labelTextColor='white'
-                 
-                  onStateChange={onStateChange}
-                  onPress={() => {
-                    if (open) {
-                      // do something if the speed dial is open
-                    }
-                  }}
-                />
-                
-              </Portal>
-            </PaperProvider>
-
-           
-
-
- {/* -------------------------------***************************---------------------------------------            */}
-            </View>
-       
-            </View>
-
-
-
-      
-      
-    </SafeAreaView>
+      <FAB.Group
+        open={state.open}
+        visible
+        icon={state.open ? 'close' : 'plus'}
+        actions={[
+          {
+            icon: icons.category,
+            label: "Add New Category",
+            onPress: () => router.push('../category/viewCategory'),
+          },
+          {
+            icon: icons.addProduct,
+            label: 'Add New Product',
+            onPress: () => router.push('../products/addProducts'),
+          },
+        ]}
+        onStateChange={onStateChange}
+        fabStyle={{
+          backgroundColor: '#7c3aed',
+          borderRadius: 50,
+        }}
+        color="white"
+      />
+    </View>
   );
 };
 

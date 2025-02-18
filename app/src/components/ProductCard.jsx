@@ -1,89 +1,78 @@
-// In ProductCard component
-import { useNavigation } from '@react-navigation/native';
-import { router } from 'expo-router';
-// import axiosInstance from '../path/to/axiosInstance'; // Add the correct path to axiosInstance
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import React from 'react';
+import { MaterialIcons } from '@expo/vector-icons';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 
-import * as React from 'react';
-import { View, Text, Image } from 'react-native';
-import { Card, Button } from 'react-native-paper';
-import axiosInstance from '../api/axiosInstance';
-import { Alert } from 'react-native';
-
-const ProductCard = ({ 
-  imageSource, 
-  productName, 
-  productPrice, 
-  discountedPrice, 
-  quantity, 
-  availability, 
-  otherStyle, 
-  productId,
-  refreshPage, // Add refreshPage prop
-  onDelete, // Add onDelete prop
-  ...props
-}) => {
-  const handleDelete = async () => {
-    try {
-      Alert.alert("Delete Product", 
-        "Are you sure you want to delete this product?", 
-        [ {
-          text: "Cancel",
-          style: "cancel"
-        }, 
-        {
-          text: "Delete",
-          onPress: () =>axiosInstance.delete(`products/${productId}`),
-          style: "destructive"
-        } ]);
-     
-      onDelete(); // Trigger refresh after deletion
-    } catch (error) {
-      console.error('Error deleting product', error);
-    }
-  };
-
+const ProductCard = ({ item, index, onDelete, onEdit }) => {
   return (
-    <View className={`my-2 mx-4  ${otherStyle}`}>
-      <Card className="rounded-lg shadow-lg bg-white overflow-hidden">
-        <View className="flex-row p-3">
+    <TouchableOpacity activeOpacity={0.9}>
+      <Animated.View 
+        entering={FadeInRight.delay(index * 100).springify()}
+        className="mb-4 mx-3 bg-gray-900/90 rounded-2xl overflow-hidden border border-purple-500/20"
+      >
+        <View className="relative">
           <Image
-            source={{ uri: imageSource }}
-            className="w-24 h-24 rounded-full mr-4 bg-black"
-            resizeMode="contain"
+            source={{ uri: item.bannerImage }}
+            className="w-full h-40 rounded-t-2xl"
+            resizeMode="cover"
           />
-          <View className="flex-1 justify-center">
-            <Text className="text-xl font-semibold text-gray-800 mb-1">{productName}</Text>
-            <Text className={`text-lg ${discountedPrice ? 'line-through text-gray-500' : 'text-gray-700'}`}>
-              ${productPrice}
-            </Text>
-            {discountedPrice && (
-              <Text className="text-lg text-red-500 mt-1">${discountedPrice}</Text>
-            )}
-            <Text className="text-sm text-gray-600 mt-2">Quantity: {quantity}</Text>
-            <Text className={`text-sm font-bold mt-1 ${availability === 'Available' ? 'text-green-600' : 'text-red-600'}`} >
-              {availability}
+          
+          <View className="absolute top-2 left-2 bg-purple-600/90 px-2 py-0.5 rounded-full">
+            <Text className="text-white text-xs font-medium">
+              {item.availability ? 'In Stock' : 'Out of Stock'}
             </Text>
           </View>
+
+          <TouchableOpacity 
+            className="absolute top-2 right-2 bg-purple-600/90 rounded-full p-2"
+            activeOpacity={0.8}
+            onPress={() => onEdit?.(item)}
+          >
+            <MaterialIcons name="edit" size={20} color="#fff" />
+          </TouchableOpacity>
         </View>
 
-        <Card.Actions className="bg-gray-100 p-3 space-x-2">
-          <Button
-            mode="outlined"
-            onPress={() => console.log("Edit pressed")} // Correctly call goToProductDetails
-            className="border-gray-400"
-          >
-            Edit
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={handleDelete} // Correctly call deleteProduct
-            className="border-gray-400"
-          >
-            Delete
-          </Button>
-        </Card.Actions>
-      </Card>
-    </View>
+        <View className="p-3 border-t border-purple-500/20">
+          <View className="flex-row justify-between items-start mb-2">
+            <View className="flex-1">
+              <Text className="text-white text-base font-bold mb-0.5 mr-2">
+                {item.name}
+              </Text>
+            </View>
+            <View className="items-end">
+              <View className="flex-row items-center">
+                <MaterialIcons name="attach-money" size={16} color="#fff" />
+                <Text className="text-white text-base font-bold">
+                  {item.discountedPrice || item.price}
+                </Text>
+              </View>
+              {item.discountedPrice && (
+                <Text className="text-gray-500 text-xs line-through">
+                  ₹{item.price}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          <View className="flex-row justify-between items-center pt-2 border-t border-purple-500/20">
+            <View className="flex-row items-center">
+              <MaterialIcons name="inventory" size={14} color="#9ca3af" />
+              <Text className="text-gray-400 text-xs ml-1">
+                Qty: {item.quantity}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              className="flex-row items-center bg-red-500/20 rounded-full px-3 py-1.5"
+              activeOpacity={0.8}
+              onPress={() => onDelete?.(item._id)}
+            >
+              <MaterialIcons name="delete" size={20} color="#ef4444" />
+              <Text className="text-red-500 text-sm ml-1 font-medium">Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Animated.View>
+    </TouchableOpacity>
   );
 };
 
