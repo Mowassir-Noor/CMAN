@@ -150,8 +150,8 @@ const AddProducts = () => {
     </TouchableOpacity>
   )
 
-  // Form submission handlers
-  const handleSubmit = () => {
+  // Modify the submit handler to combine both save and post operations
+  const handleSubmit = async () => {
     const newFormData = new FormData()
     
     // Append product details to form data
@@ -184,19 +184,46 @@ const AddProducts = () => {
       })
     }
 
-    setFormData(newFormData)
-    console.log('Form Data:', newFormData)
-  }
-
-  const postProduct = async formData => {
     try {
-      const response = await axiosInstance.post('/products', formData, {
+      setLoading(true)
+      const response = await axiosInstance.post('/products', newFormData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       })
+      Alert.alert(
+        'Success',
+        'Product added successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Reset form
+              setSelectedImages([])
+              setBannerImage(null)
+              setProductDetails({
+                productName: '',
+                price: '',
+                discountedPrice: '',
+                quantity: '',
+                brand: '',
+                category: '',
+                description: '',
+                productSpecification: '',
+                experiencePeriod: '',
+                availability: ''
+              })
+            }
+          }
+        ]
+      )
       console.log('Product added successfully:', response.data)
     } catch (error) {
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'Failed to add product. Please try again.',
+        [{ text: 'OK' }]
+      )
       if (error.response) {
         console.error('Server Error:', error.response.data)
       } else if (error.request) {
@@ -204,6 +231,8 @@ const AddProducts = () => {
       } else {
         console.error('Error:', error.message)
       }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -333,17 +362,10 @@ const AddProducts = () => {
               mode='contained'
               buttonColor='purple'
               onPress={handleSubmit}
-              className='mt-4'
-            >
-              Save
-            </Button>
-            <Button
-              mode='contained'
-              buttonColor='purple'
-              onPress={() => postProduct(formData)}
               className='mt-4 mb-5'
+              disabled={loading}
             >
-              Submit
+              {loading ? 'Submitting...' : 'Submit'}
             </Button>
           </View>
 
