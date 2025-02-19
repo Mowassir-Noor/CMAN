@@ -8,5 +8,5 @@ const createCategory = () => {
     </View>
   )
 }
-
+  
 export default createCategory
