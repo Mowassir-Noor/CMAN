@@ -7,8 +7,8 @@ const ProductCard = ({ item, index, onDelete, onEdit }) => {
   return (
     <TouchableOpacity activeOpacity={0.5} onPress={() => onEdit?.(item)}>
       <Animated.View 
-        entering={FadeInRight.delay(index * 100).springify()}
-        className="mb-4 mx-3 bg-gray-900/90 rounded-2xl overflow-hidden border border-gray-300"
+        entering={FadeInRight.delay(index * 10).springify()}
+        className="mb-4 mx-3  bg-black rounded-2xl overflow-hidden border border-gray-300"
       >
         <View className="relative">
           <Image

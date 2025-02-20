@@ -147,7 +147,7 @@ const Products = () => {
       <StatusBar barStyle="light-content" />
       
       {/* Header */}
-      <View className="px-4 pt-5 pb-4 bg-gray-900/80">
+      <View className="px-4 pt-5 pb-4  bg-black ">
         
         {/* Original SearchBar */}
         <SearchBar

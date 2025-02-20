@@ -11,7 +11,7 @@ const TabIcon = ({ icon, color, name, focused }) => {
         source={icon}
         resizeMode="contain"
         tintColor={color}
-        className="w-6 h-6 mt-3"
+        className="w-6 h-6 mt-7"
       />
       <Text
         className={`${focused ? "font-pregular mb-2 " : "font-pregular"} text-xs text-center`}
@@ -26,20 +26,31 @@ const TabIcon = ({ icon, color, name, focused }) => {
 const TabLayout = () => {
   return (
     <AuthProvider>
-      <>
+      < >
         <Tabs
+
+       
           screenOptions={{
             tabBarActiveTintColor: "purple",
             tabBarInactiveTintColor: "#CDCDE0",
             tabBarHideOnKeyboard: true,
             tabBarShowLabel: false,
             tabBarStyle: {
+              justifyContent: "space-between",
+              // alignItems: "center",
+              alignContent: "center",
+              // backgroundColor: "#111827",
               backgroundColor: "black",
+              
               borderTopWidth: 2,
-              borderTopColor: "black",
+              borderColor:"white",
+              
               height: 60,
+              
             },
-          }}
+          
+          } }
+       
         >
           <Tabs.Screen
             name="home"
