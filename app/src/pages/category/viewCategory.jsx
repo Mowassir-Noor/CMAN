@@ -1,80 +1,80 @@
-import { View, Text, FlatList, Image, StatusBar, TouchableOpacity } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import axiosInstance from '../../api/axiosInstance';
+import { View, Text, FlatList, StatusBar, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
 import { FAB } from 'react-native-paper';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+import { useCategory } from '../../hooks/useCategory';
+import CategoryCard from '../../components/CategoryCard';
 
 const ViewCategory = () => {
-  const [categories, setCategories] = useState([]);
-
-  const fetchCategories = async () => {
-    try {
-      const response = await axiosInstance.get('category');
-      console.log(response.data.data);
-      setCategories(response.data.data);
-    } catch (error) {
-      console.error('Error fetching categories', error);
-    }
-  };
+  const { categories, loading, error, fetchCategories, deleteCategory } = useCategory();
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
-  const renderItem = ({ item, index }) => (
-    <TouchableOpacity activeOpacity={0.9}>
-      <Animated.View 
-        entering={FadeInRight.delay(index * 100).springify()}
-        className="mb-6 mx-4 bg-gray-900/90 rounded-3xl overflow-hidden border border-purple-500/20"
-      >
-        <View className="relative">
-          <Image
-            source={{ uri: item.image }}
-            className="w-full h-56 rounded-t-3xl"
-            resizeMode="cover"
-          />
-          <View className="absolute bottom-0 left-0 right-0 h-full bg-gradient-to-t from-black via-black/40 to-transparent" />
-          
-          {/* Category Label */}
-          <View className="absolute top-4 left-4 bg-purple-600/90 px-3 py-1 rounded-full">
-            <Text className="text-white text-xs font-medium">Category</Text>
-          </View>
+  const handleDelete = (categoryId) => {
+    Alert.alert(
+      'Delete Category',
+      'Are you sure you want to delete this category?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await deleteCategory(categoryId);
+            if (success) {
+              Alert.alert('Success', 'Category deleted successfully');
+            }
+          },
+        },
+      ]
+    );
+  };
 
-          {/* Action Button */}
-          <TouchableOpacity 
-            className="absolute top-4 right-4 bg-purple-600/90 rounded-full p-2"
-            activeOpacity={0.8}
-          >
-            <MaterialIcons name="edit" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
+  const handleEdit = (category) => {
+    // Implement edit navigation here
+    // router.push({
+    //   pathname: '../category/createCategory',
+    //   params: { category: JSON.stringify(category) }
+    // });
+    console.log('Edit category button pressed:', category);
+  };
 
-        {/* Info Row - Replaces the old stats row */}
-        <View className="p-4 border-t border-purple-500/20">
-          <View className="flex-row justify-between items-center">
-            <View className="flex-1">
-              <Text className="text-gray-400 text-xs mb-1">Category Name</Text>
-              <Text className="text-white text-lg font-semibold">{item.name}</Text>
-            </View>
-            <View className="flex-1 items-end">
-              <Text className="text-gray-400 text-xs mb-1">Price Range</Text>
-              <Text className="text-purple-400 text-base font-bold">
-                ₹{item.minPrice} - ₹{item.maxPrice}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </Animated.View>
-    </TouchableOpacity>
-  );
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchCategories();
+    setRefreshing(false);
+  }, [fetchCategories]);
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-black justify-center items-center">
+        <ActivityIndicator size="large" color="#7c3aed" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 bg-black justify-center items-center p-4">
+        <Text className="text-white text-center">{error}</Text>
+        <TouchableOpacity 
+          className="mt-4 bg-purple-600 px-4 py-2 rounded-full"
+          onPress={fetchCategories}
+        >
+          <Text className="text-white">Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-black">
       <StatusBar barStyle="light-content" />
       
-      {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-gray-900/80">
         <View className="flex-row justify-between items-center">
           <View>
@@ -95,18 +95,32 @@ const ViewCategory = () => {
       <FlatList
         data={categories}
         keyExtractor={(item) => item._id}
-        renderItem={renderItem}
+        renderItem={({ item, index }) => (
+          <CategoryCard 
+            item={item} 
+            index={index} 
+            onDelete={handleDelete}
+            onEdit={handleEdit}
+          />
+        )}
         contentContainerStyle={{ paddingVertical: 16 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#7c3aed"
+            colors={['#7c3aed']}
+            progressBackgroundColor="#1f1f1f"
+          />
+        }
       />
       
       <FAB
         icon="plus"
         label="Add Category"
         className="absolute right-2 bottom-4 bg-purple-600/90"
-        style={{
-          backgroundColor: '#7c3aed',
-        }}
+        style={{ backgroundColor: '#7c3aed' }}
         color="white"
         onPress={() => router.push('../category/createCategory')}
       />

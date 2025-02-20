@@ -12,7 +12,7 @@ export const pickImages = async (setSelectedImages) => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.Images,
       allowsMultipleSelection: true,
       quality: 1,
     });
@@ -36,7 +36,7 @@ export const pickSingleImage = async (setSelectedImages) => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.Images,
       quality: 1,
       allowsMultipleSelection: false,
     });
