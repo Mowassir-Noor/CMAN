@@ -128,7 +128,7 @@ const Products = () => {
 
   const handleEdit = (item) => {
     router.push({
-      pathname: "../products/editProduct",
+      pathname: "../products/editProducts",
       params: { productId: item._id }
     });
   };
