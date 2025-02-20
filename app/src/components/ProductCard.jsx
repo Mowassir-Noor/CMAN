@@ -5,10 +5,10 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 
 const ProductCard = ({ item, index, onDelete, onEdit }) => {
   return (
-    <TouchableOpacity activeOpacity={0.9}>
+    <TouchableOpacity activeOpacity={0.5} onPress={() => onEdit?.(item)}>
       <Animated.View 
         entering={FadeInRight.delay(index * 100).springify()}
-        className="mb-4 mx-3 bg-gray-900/90 rounded-2xl overflow-hidden border border-purple-500/20"
+        className="mb-4 mx-3 bg-gray-900/90 rounded-2xl overflow-hidden border border-gray-300"
       >
         <View className="relative">
           <Image
@@ -17,18 +17,18 @@ const ProductCard = ({ item, index, onDelete, onEdit }) => {
             resizeMode="cover"
           />
           
-          <View className="absolute top-2 left-2 bg-purple-600/90 px-2 py-0.5 rounded-full">
-            <Text className="text-white text-xs font-medium">
+          <View className="absolute top-2 left-2 bg-gray-900/90 px-2 py-0.5 rounded-full">
+            <Text className="text-white text-xs   font-bold">
               {item.availability ? 'In Stock' : 'Out of Stock'}
             </Text>
           </View>
 
           <TouchableOpacity 
-            className="absolute top-2 right-2 bg-purple-600/90 rounded-full p-2"
+            className="absolute top-2 right-2 bg-gray-900/90 rounded-full p-2 border-purple-500/20 border-2"
             activeOpacity={0.8}
             onPress={() => onEdit?.(item)}
           >
-            <MaterialIcons name="edit" size={20} color="#fff" />
+            <MaterialIcons name="edit" size={20} color="white" />
           </TouchableOpacity>
         </View>
 
@@ -41,9 +41,9 @@ const ProductCard = ({ item, index, onDelete, onEdit }) => {
             </View>
             <View className="items-end">
               <View className="flex-row items-center">
-                <MaterialIcons name="attach-money" size={16} color="#fff" />
+                
                 <Text className="text-white text-base font-bold">
-                  {item.discountedPrice || item.price}
+                ₹ {item.discountedPrice || item.price}
                 </Text>
               </View>
               {item.discountedPrice && (
@@ -62,12 +62,13 @@ const ProductCard = ({ item, index, onDelete, onEdit }) => {
               </Text>
             </View>
             <TouchableOpacity 
-              className="flex-row items-center bg-red-500/20 rounded-full px-3 py-1.5"
+              className="flex-row items-center  bg-white rounded-full px-3 py-1.5"
               activeOpacity={0.8}
               onPress={() => onDelete?.(item._id)}
             >
-              <MaterialIcons name="delete" size={20} color="#ef4444" />
-              <Text className="text-red-500 text-sm ml-1 font-medium">Delete</Text>
+              {/* <MaterialIcons name="delete" size={20} color="#ef4444" /> */}
+              <MaterialIcons name="delete" size={20} color="purple" />
+              <Text className=" text-gray-900/90 text-sm ml-1 font-medium">Delete</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -75,5 +76,7 @@ const ProductCard = ({ item, index, onDelete, onEdit }) => {
     </TouchableOpacity>
   );
 };
+
+
 
 export default ProductCard;

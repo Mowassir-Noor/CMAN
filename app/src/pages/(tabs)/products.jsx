@@ -241,24 +241,59 @@ const Products = () => {
         open={state.open}
         visible
         icon={state.open ? 'close' : 'plus'}
+        backdropColor='rgba(0, 0, 0, 0.7)'
+        
+        
         actions={[
           {
             icon: icons.category,
             label: "Add New Category",
+            size: 30,
+            labelTextColor: 'white',
+            color: 'purple',
+           
+
+            style: {
+              backgroundColor: 'white',
+              borderRadius: 20,
+              borderColor: 'purple',
+              borderWidth: 3,
+            },
             onPress: () => router.push('../category/viewCategory'),
           },
           {
             icon: icons.addProduct,
             label: 'Add New Product',
+            size: 30,
+            labelTextColor: 'white',
+            color: 'purple',
+          
+
+            style: {
+              backgroundColor: 'white',
+              borderRadius: 20,
+              borderColor: 'purple',
+              borderWidth: 3,
+
+            },
+
+            
             onPress: () => router.push('../products/addProducts'),
           },
         ]}
+         color="white"
         onStateChange={onStateChange}
         fabStyle={{
-          backgroundColor: '#7c3aed',
+          backgroundColor: 'purple',
           borderRadius: 50,
+        
+         
+
+          
+        
+         
         }}
-        color="white"
+       
       />
     </View>
   );
