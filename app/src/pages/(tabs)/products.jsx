@@ -178,7 +178,11 @@ const Products = () => {
 
       <FlatList
         data={products}
-        keyExtractor={(item) => item._id}
+
+        // using item._id as the key here is not recommended 
+        // because the same product can appear multiple times in the list
+        // and the key will not be unique
+        keyExtractor={(item, index) => `${item._id}-${index}`}
         renderItem={renderItem}
         refreshControl={
           <RefreshControl 

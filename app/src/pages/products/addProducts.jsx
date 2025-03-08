@@ -162,7 +162,7 @@ const AddProducts = () => {
     })
 
     // Handle specifications separately
-    productDetails.productSpecification.split(',').forEach(spec => {
+    productDetails.productSpecification.split('\n').forEach(spec => {
       newFormData.append('specifications[]', spec.trim())
     })
 
@@ -338,6 +338,7 @@ const AddProducts = () => {
                 multiline={true}
                 value={productDetails.productSpecification}
                 onChangeText={text => setProductDetails({ ...productDetails, productSpecification: text })}
+              
               />
             </View>
 
