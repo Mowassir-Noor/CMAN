@@ -1,8 +1,7 @@
-import { View, Text, SafeAreaView, TouchableOpacity, ActivityIndicator, Platform, ScrollView } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import { WebView } from 'react-native-webview';
 import axiosInstance from '../../api/axiosInstance';
-import { MaterialIcons } from '@expo/vector-icons';
 
 const Inbox = () => {
   const [about, setAbout] = useState('');
@@ -53,17 +52,6 @@ const Inbox = () => {
           line-height: 1.6;
           color: #212529;
         }
-        #editor:focus {
-          outline: none;
-        }
-        img {
-          max-width: 100%;
-          height: auto;
-          margin: 8px 0;
-        }
-        a {
-          color: #7c3aed;
-        }
       </style>
     </head>
     <body>
@@ -72,7 +60,7 @@ const Inbox = () => {
         <button class="toolbar-button" onclick="format('italic')"><i>I</i></button>
         <button class="toolbar-button" onclick="format('underline')"><u>U</u></button>
         <button class="toolbar-button" onclick="format('strikeThrough')"><s>S</s></button>
-        <button class="toolbar-button" onclick="format('justifyLeft')">⌧</button>
+        <button class="toolbar-button" onclick="format('justifyLeft')">←</button>
         <button class="toolbar-button" onclick="format('justifyCenter')">≡</button>
         <button class="toolbar-button" onclick="format('justifyRight')">⌦</button>
         <button class="toolbar-button" onclick="format('insertUnorderedList')">•</button>
@@ -88,8 +76,6 @@ const Inbox = () => {
         editor.innerHTML = \`${about}\`;
         
         let lastHtml = editor.innerHTML;
-        let isTyping = false;
-        let typeTimer;
         
         function format(command, value = null) {
           document.execCommand(command, false, value);
@@ -128,44 +114,10 @@ const Inbox = () => {
           }
         }
         
-        editor.addEventListener('input', () => {
-          if (isTyping) {
-            clearTimeout(typeTimer);
-          }
-          isTyping = true;
-          typeTimer = setTimeout(() => {
-            isTyping = false;
-            updateContent();
-          }, 1000);
-        });
-
+        editor.addEventListener('input', updateContent);
         editor.addEventListener('blur', updateContent);
         
-        editor.addEventListener('paste', (e) => {
-          e.preventDefault();
-          const text = (e.originalEvent || e).clipboardData.getData('text/plain');
-          document.execCommand('insertText', false, text);
-        });
-        
         document.execCommand('defaultParagraphSeparator', false, 'p');
-        
-        document.addEventListener('keydown', (e) => {
-          if (e.ctrlKey || e.metaKey) {
-            switch (e.key.toLowerCase()) {
-              case 'b': format('bold'); e.preventDefault(); break;
-              case 'i': format('italic'); e.preventDefault(); break;
-              case 'u': format('underline'); e.preventDefault(); break;
-              case 'z': 
-                if (e.shiftKey) {
-                  document.execCommand('redo');
-                } else {
-                  document.execCommand('undo');
-                }
-                e.preventDefault();
-                break;
-            }
-          }
-        });
       </script>
     </body>
     </html>
@@ -174,7 +126,6 @@ const Inbox = () => {
   const fetchAbout = async () => {
     try {
       setLoading(true);
-      // Update endpoint to match your API
       const response = await axiosInstance.get('/about-us');
       if (response.data && response.data.data) {
         setAbout(response.data.data.content || '');
@@ -191,92 +142,53 @@ const Inbox = () => {
 
   const cleanHtml = (html) => {
     return html
-      .replace(/&nbsp;/g, ' ') // Replace HTML spaces with regular spaces
-      .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .replace(/&nbsp;/g, ' ')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim();
   };
 
   const countWords = (str) => {
     const text = cleanHtml(str);
     const words = text.split(' ').filter(word => word.length > 0);
-    console.log('Word count:', words.length);
-    console.log('Text content:', text);
     return words.length;
-  };
-
-  const convertHtmlToText = (html) => {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    // Convert line breaks and paragraphs to newlines
-    div.innerHTML = div.innerHTML.replace(/<br\s*\/?>/gi, '\n');
-    div.innerHTML = div.innerHTML.replace(/<\/p>/gi, '\n\n');
-    // Get text content and normalize spaces
-    return div.textContent
-      .replace(/\s+/g, ' ')
-      .trim();
   };
 
   const handleSave = async () => {
     try {
       const wordCount = countWords(about);
-      console.log('Attempting to save content with word count:', wordCount);
-
       if (wordCount < 50) {
         alert(`Please add more content. Current word count: ${wordCount}. Minimum required: 50 words.`);
         return;
       }
 
       setSaving(true);
+      const response = await axiosInstance.patch('/about-us', about, {
+        headers: {
+          'Content-Type': 'text/plain'
+        }
+      });
       
-      // Inject script to get plain text from HTML
-      webViewRef.current.injectJavaScript(`
-        (function() {
-          const div = document.createElement('div');
-          div.innerHTML = document.getElementById('editor').innerHTML;
-          const text = div.textContent.replace(/\\s+/g, ' ').trim();
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'saveContent', text }));
-          true;
-        })();
-      `);
+      if (response.data && response.data.success) {
+        alert('Content saved successfully!');
+      } else {
+        throw new Error(response.data?.message || 'Save operation failed');
+      }
     } catch (error) {
       console.error('Save error:', error.response?.data);
       alert(error.response?.data?.message || error.message || 'Failed to save content');
+    } finally {
       setSaving(false);
     }
+  };
+
+  const onMessage = (event) => {
+    setAbout(event.nativeEvent.data);
   };
 
   useEffect(() => {
     fetchAbout();
   }, []);
-
-  const onMessage = async (event) => {
-    const data = event.nativeEvent.data;
-    try {
-      const parsedData = JSON.parse(data);
-      if (parsedData.type === 'saveContent') {
-        // Send the plain text to the API
-        const response = await axiosInstance.patch('/about-us', parsedData.text, {
-          headers: {
-            'Content-Type': 'text/plain'
-          }
-        });
-        
-        if (response.data && response.data.success) {
-          alert('Content saved successfully!');
-        } else {
-          throw new Error(response.data?.message || 'Save operation failed');
-        }
-        setSaving(false);
-      } else {
-        // Regular content update
-        setAbout(data);
-      }
-    } catch (e) {
-      // If JSON.parse fails, it's regular content update
-      setAbout(data);
-    }
-  };
 
   return (
     <SafeAreaView className="flex-1 bg-black">
@@ -309,11 +221,6 @@ const Inbox = () => {
             className="flex-1 bg-white"
             scrollEnabled={true}
             androidLayerType={Platform.OS === 'android' ? 'software' : undefined}
-            injectedJavaScript={`
-              window.onload = function() {
-                document.getElementById('editor').focus();
-              }
-            `}
           />
         )}
       </View>
