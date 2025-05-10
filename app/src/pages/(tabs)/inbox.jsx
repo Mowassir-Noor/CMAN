@@ -8,116 +8,92 @@ const Inbox = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [webViewKey, setWebViewKey] = useState(0);
   const webViewRef = useRef(null);
 
-  const editorHTML = `
+  const html = `
     <!DOCTYPE html>
     <html>
     <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, height=device-height, viewport-fit=cover">
       <style>
-        body {
-          padding: 0;
+        html, body {
           margin: 0;
-          font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto;
+          padding: 0;
+          height: 100%;
+          overflow: hidden;
+        }
+        body {
+          display: flex;
+          flex-direction: column;
+          font-family: -apple-system;
+          position: fixed;
+          width: 100%;
+          -webkit-user-select: none;
         }
         #toolbar {
+          flex: none;
           padding: 8px;
-          background-color: #f8f9fa;
-          border-bottom: 1px solid #dee2e6;
-          position: sticky;
-          top: 0;
-          z-index: 100;
-        }
-        .toolbar-button {
-          padding: 6px 12px;
-          margin: 0 2px;
-          background: white;
-          border: 1px solid #ced4da;
-          border-radius: 4px;
-          color: #495057;
-          font-size: 14px;
-          cursor: pointer;
-          min-width: 35px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .toolbar-button:active {
-          background: #e9ecef;
+          background: #f8f9fa;
+          border-bottom: 1px solid #ddd;
         }
         #editor {
-          min-height: 300px;
+          flex: 1;
           padding: 16px;
-          line-height: 1.6;
-          color: #212529;
+          font-size: 16px;
+          min-height: 200px;
+          overflow-y: auto;
+          -webkit-user-select: text;
+        }
+        button {
+          padding: 8px;
+          margin: 0 4px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
         }
       </style>
     </head>
     <body>
       <div id="toolbar">
-        <button class="toolbar-button" onclick="format('bold')"><b>B</b></button>
-        <button class="toolbar-button" onclick="format('italic')"><i>I</i></button>
-        <button class="toolbar-button" onclick="format('underline')"><u>U</u></button>
-        <button class="toolbar-button" onclick="format('strikeThrough')"><s>S</s></button>
-        <button class="toolbar-button" onclick="format('justifyLeft')">←</button>
-        <button class="toolbar-button" onclick="format('justifyCenter')">≡</button>
-        <button class="toolbar-button" onclick="format('justifyRight')">⌦</button>
-        <button class="toolbar-button" onclick="format('insertUnorderedList')">•</button>
-        <button class="toolbar-button" onclick="format('insertOrderedList')">1.</button>
-        <button class="toolbar-button" onclick="addLink()">🔗</button>
-        <button class="toolbar-button" onclick="addImage()">📷</button>
-        <button class="toolbar-button" onclick="document.execCommand('undo')">↩</button>
-        <button class="toolbar-button" onclick="document.execCommand('redo')">↪</button>
+        <button onclick="format('bold')">B</button>
+        <button onclick="format('italic')">I</button>
+        <button onclick="format('underline')">U</button>
+        <button onclick="format('justifyLeft')">←</button>
+        <button onclick="format('justifyCenter')">≡</button>
+        <button onclick="format('justifyRight')">→</button>
       </div>
       <div id="editor" contenteditable="true"></div>
       <script>
         const editor = document.getElementById('editor');
-        editor.innerHTML = \`${about}\`;
+        editor.innerHTML = '${about?.replace(/'/g, "\\'")}';
         
-        let lastHtml = editor.innerHTML;
+        // Prevent zoom on double tap
+        document.addEventListener('touchstart', (e) => {
+          if (e.touches.length > 1) {
+            e.preventDefault();
+          }
+        });
+
+        // Prevent zoom gestures
+        document.addEventListener('gesturestart', (e) => {
+          e.preventDefault();
+        });
         
-        function format(command, value = null) {
-          document.execCommand(command, false, value);
+        editor.addEventListener('input', () => {
+          window.ReactNativeWebView.postMessage(editor.innerHTML);
+        });
+        
+        editor.addEventListener('blur', () => {
+          setTimeout(() => editor.focus(), 0);
+        });
+        
+        function format(cmd) {
+          document.execCommand(cmd, false, null);
           editor.focus();
-          updateContent();
         }
         
-        function addLink() {
-          const selection = document.getSelection();
-          const url = prompt('Enter URL:', 'https://');
-          if (url) {
-            if (selection.toString().length === 0) {
-              const linkText = prompt('Enter link text:', '');
-              if (linkText) {
-                document.execCommand('insertHTML', false, 
-                  '<a href="' + url + '" target="_blank">' + linkText + '</a>');
-              }
-            } else {
-              format('createLink', url);
-            }
-          }
-        }
-        
-        function addImage() {
-          const url = prompt('Enter image URL:', 'https://');
-          if (url) {
-            format('insertImage', url);
-          }
-        }
-        
-        function updateContent() {
-          const content = editor.innerHTML;
-          if (content !== lastHtml) {
-            lastHtml = content;
-            window.ReactNativeWebView.postMessage(content);
-          }
-        }
-        
-        editor.addEventListener('input', updateContent);
-        editor.addEventListener('blur', updateContent);
-        
-        document.execCommand('defaultParagraphSeparator', false, 'p');
+        setTimeout(() => editor.focus(), 100);
       </script>
     </body>
     </html>
@@ -154,6 +130,7 @@ const Inbox = () => {
     return words.length;
   };
 
+  
   const handleSave = async () => {
     try {
       const wordCount = countWords(about);
@@ -182,13 +159,21 @@ const Inbox = () => {
     }
   };
 
+
   const onMessage = (event) => {
     setAbout(event.nativeEvent.data);
   };
 
+
   useEffect(() => {
     fetchAbout();
   }, []);
+
+  useEffect(() => {
+    if (!loading && about) {
+      setWebViewKey(k => k + 1);
+    }
+  }, [about, loading]);
 
   return (
     <SafeAreaView className="flex-1 bg-black">
@@ -215,12 +200,18 @@ const Inbox = () => {
           <Text className="text-red-500 px-4">{error}</Text>
         ) : (
           <WebView
-            ref={webViewRef}
-            source={{ html: editorHTML }}
+            key={webViewKey}
+            source={{ html }}
             onMessage={onMessage}
             className="flex-1 bg-white"
-            scrollEnabled={true}
-            androidLayerType={Platform.OS === 'android' ? 'software' : undefined}
+            scrollEnabled={false}
+            keyboardDisplayRequiresUserAction={false}
+            automaticallyAdjustContentInsets={false}
+            hideKeyboardAccessoryView={true}
+            startInLoadingState={true}
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+            originWhitelist={['*']}
           />
         )}
       </View>

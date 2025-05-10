@@ -21,7 +21,7 @@ export default function App() {
       <View className="flex-1  items-center  w-full h-full">
     
         <Image 
-          source={images.blackLogo}
+          source={images.cmanLogo}
         className='max-w-[500px] w-full h-[500px]'
           resizeMode='contain' 
         />
@@ -29,7 +29,7 @@ export default function App() {
 
       {/* Overlay Content */}
       <View className="flex-1 justify-start items-center px-8 z-10">
-        <Text className="text-white text-3xl font-bold mb-4">Welcome to Vansaya</Text>
+        <Text className="text-white text-3xl font-bold mb-4">Welcome to CMAN</Text>
         <CustomButton buttonTitle="Log In" otherStyles="w-5/6" onPress={handleLoginPress} />
       </View>
 

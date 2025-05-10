@@ -6,6 +6,6 @@ import path from"assets/images/path.png";
 import logoSmall from "assets/images/logo-small.png";
 import empty from "assets/images/empty.png";
 import blackLogo from 'assets/images/VansayaLogoBlack.jpg'
+import cmanLogo from 'assets/images/cman-logo.png'
 
-
-export default { profile, thumbnail, cards, path,  logoSmall, empty, blackLogo };
+export default { profile, thumbnail, cards, path,  logoSmall, empty, blackLogo ,cmanLogo};
