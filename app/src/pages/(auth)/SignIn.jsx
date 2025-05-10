@@ -4,7 +4,10 @@ import { Link, useRouter } from 'expo-router';
 import CustomButton from '../../components/customButton';
 import Form from '../../components/formField';
 // import axiosInstance from '../../api/axiosInstance';
-import axiosInstance from '../../utils/axiosInstance';
+// import axiosInstance from '../../utils/axiosInstance';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../../firebaseConfig';
+import axiosInstance from '../../../src/api/axiosInstance';
 import * as SecureStore from 'expo-secure-store';
 
 const SignIn = () => {
@@ -21,33 +24,32 @@ const SignIn = () => {
   const [error, setError] = useState('');
 
   // Function to handle login
-  const handleLogin = async () => {
-    setIsLoading(true); // Show loading indicator
-    setError(''); // Clear previous error messages
-
+   const handleLogin = async () => {
     try {
-      // Make an API call to the login endpoint
-      const response = await axiosInstance.post('login', { email, password });
-
-      // Extract the token from the response
-      const token = response.data.data;
-
-      // Store the token securely in SecureStore
-      await SecureStore.setItemAsync('authtoken', token);
-
-      setIsLoading(false); // Hide loading indicator
-
-      // Navigate to the products page after successful login
-      router.replace('../(tabs)/home');
-
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+     
+      const idToken = await user.getIdToken();
+      console.log("ID Token:", idToken);
+  
+      const response = await axiosInstance.post('/verify-token', { idToken }, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+  
+      if (response.status === 200) {
+        Alert.alert("Login Success", `Welcome ${response.data.email}`);
+        router.push('../(tabs)/home');
+      } else {
+        Alert.alert("Error", response.data.error || "Unexpected error");
+      }
     } catch (error) {
-      // Handle login errors
-      setIsLoading(false); // Hide loading indicator
-      setError('Invalid email or password'); // Set error message
-      console.error('Login error:', error); // Log error for debugging
+      console.error("Login error:", error);
+      Alert.alert("Login Failed", error.message || "Something went wrong");
     }
   };
-
+  
   return (
     <SafeAreaView className="flex-1 justify-center items-center bg-black p-5">
       {/* Header Section */}

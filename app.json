@@ -21,6 +21,7 @@
         "android.permission.RECORD_AUDIO"
       ],
       "package": "com.anonymous.VansayaAdmin"
+      
     },
     "web": {
       "bundler": "metro",
@@ -41,6 +42,7 @@
       "expo-secure-store",
       "expo-document-picker",
       "expo-image-picker"
+   
     ],
     "experiments": {
       "typedRoutes": true

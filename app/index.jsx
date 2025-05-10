@@ -9,14 +9,14 @@ import { AuthProvider } from './src/context/AuthContext';
 export default function App() {
   const router = useRouter();
 
-  // const handleLoginPress = () => {
-  //   router.push('./src/pages/(auth)/SignIn');
-  // };
+  const handleLoginPress = () => {
+    router.push('./src/pages/(auth)/SignIn');
+  };
 
   
-  const handleLoginPress = () => {
-    router.push('./src/pages/(tabs)/home');
-  }
+  // const handleLoginPress = () => {
+  //   router.push('./src/pages/(tabs)/home');
+  // }
   return (
    
     <SafeAreaView className="flex-1 justify-center items-center bg-black">
