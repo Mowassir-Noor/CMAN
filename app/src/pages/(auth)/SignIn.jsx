@@ -3,8 +3,6 @@ import { View, Text, SafeAreaView, Alert, ActivityIndicator } from 'react-native
 import { Link, useRouter } from 'expo-router';
 import CustomButton from '../../components/customButton';
 import Form from '../../components/formField';
-// import axiosInstance from '../../api/axiosInstance';
-// import axiosInstance from '../../utils/axiosInstance';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../../firebaseConfig';
 import axiosInstance from '../../../src/api/axiosInstance';
@@ -24,29 +22,90 @@ const SignIn = () => {
   const [error, setError] = useState('');
 
   // Function to handle login
-   const handleLogin = async () => {
+  const handleLogin = async () => {
+    // Validate inputs
+    if (!email || !password) {
+      setError('Email and password are required');
+      return;
+    }
+
     try {
+      setIsLoading(true);
+      setError('');
+      
+      // Sign in with Firebase
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-     
+      
+      // Get the ID token
       const idToken = await user.getIdToken();
-      console.log("ID Token:", idToken);
-  
-      const response = await axiosInstance.post('/verify-token', { idToken }, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-  
-      if (response.status === 200) {
-        Alert.alert("Login Success", `Welcome ${response.data.email}`);
-        router.push('../(tabs)/home');
-      } else {
-        Alert.alert("Error", response.data.error || "Unexpected error");
+      
+      // Store both the token and uid for app-wide access
+      await SecureStore.setItemAsync('userToken', idToken);
+      await SecureStore.setItemAsync('userUID', user.uid);
+      
+      // Verify token with backend (if needed)
+      try {
+        const response = await axiosInstance.post('/verify-token', 
+          { idToken }, 
+          {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          }
+        );
+        
+        // If backend verification is successful
+        if (response.status === 200) {
+          // Store comprehensive user data for app-wide access
+          const userData = {
+            email: user.email,
+            uid: user.uid,
+            displayName: user.displayName || '',
+            photoURL: user.photoURL || null,
+            emailVerified: user.emailVerified,
+            phoneNumber: user.phoneNumber || null,
+            lastLoginAt: new Date().toISOString(),
+          };
+          
+          // Store complete user data as JSON string
+          await SecureStore.setItemAsync('userData', JSON.stringify(userData));
+          console.log("User data stored:", userData);
+          console.log("User UID stored:", user.uid);
+          
+          // Navigate to home screen
+          router.replace('../(tabs)/home');
+        } else {
+          throw new Error(response.data.error || "Server verification failed");
+        }
+      } catch (backendError) {
+        console.warn("Backend verification error:", backendError);
+        // Even if backend verification fails, we can still proceed with Firebase auth
+        // since the user is authenticated with Firebase
+        router.replace('../(tabs)/home');
       }
     } catch (error) {
       console.error("Login error:", error);
-      Alert.alert("Login Failed", error.message || "Something went wrong");
+      
+      let errorMessage = "Authentication failed";
+      if (error.code === 'auth/invalid-email') {
+        errorMessage = "Invalid email address";
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = "This account has been disabled";
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = "No account found with this email";
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = "Incorrect password";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Too many failed login attempts. Please try again later";
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your connection";
+      }
+      
+      setError(errorMessage);
+      Alert.alert("Login Failed", errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
   

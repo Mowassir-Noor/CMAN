@@ -50,6 +50,7 @@
     "react-native-element-dropdown": "^2.12.2",
     "react-native-gesture-handler": "~2.20.2",
     "react-native-image-picker": "^7.2.2",
+    "react-native-maps": "1.18.0",
     "react-native-paper": "^5.12.5",
     "react-native-pell-rich-editor": "^1.9.0",
     "react-native-quill": "^0.0.2",
@@ -61,7 +62,7 @@
     "react-native-webview": "^13.12.2",
     "react-native-zss-rich-text-editor": "^1.1.0",
     "tailwindcss": "^3.4.16",
-    "react-native-maps": "1.18.0"
+    "expo-linear-gradient": "~14.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

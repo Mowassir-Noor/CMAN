@@ -14,9 +14,7 @@ export default function App() {
   };
 
   
-  // const handleLoginPress = () => {
-  //   router.push('./src/pages/(tabs)/home');
-  // }
+  
   return (
    
     <SafeAreaView className="flex-1 justify-center items-center bg-black">
