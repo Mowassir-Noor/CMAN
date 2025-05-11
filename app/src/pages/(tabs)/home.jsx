@@ -1,16 +1,19 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, ActivityIndicator } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons'
 import { getClientLocation } from '../../utils/location/locationFunc'
 import { getAuthToken, getUserUID } from '../../utils/userAuth'
+import axiosInstance from '../../../src/api/axiosInstance'
 
 const Home = () => {
   const [userInfo, setUserInfo] = useState({
     uid: null,
-    token: null
+    token: null,
+    name: 'Admin User'
   });
   const [loading, setLoading] = useState(true);
   const [weatherData, setWeatherData] = useState(null);
+  const [nearbyCafes, setNearbyCafes] = useState([]);
   const [todayStats, setTodayStats] = useState({
     salesCount: 157,
     revenue: 12580,
@@ -24,6 +27,7 @@ const Home = () => {
       setLoading(true);
       await fetchUserInfo();
       await fetchWeatherData();
+      await fetchNearbyCafes();
       setLoading(false);
     };
     
@@ -35,9 +39,14 @@ const Home = () => {
       const uid = await getUserUID();
       const token = await getAuthToken();
       
+      // You would typically fetch the user's name from your user database
+      // This is a placeholder - replace with actual API call to get user data
+      const userName = "John Doe"; // Example name - replace with actual fetched name
+      
       setUserInfo({
         uid: uid,
-        token: token
+        token: token,
+        name: userName
       });
       
       console.log("User UID:", uid);
@@ -100,33 +109,33 @@ const Home = () => {
     if (!weatherData) return null;
     
     return (
-      // Replace LinearGradient with a regular View with background color
-      <View style={styles.weatherCard}>
-        <View style={styles.weatherContent}>
+      <View className="bg-gradient-to-br from-blue-500 to-indigo-600 mx-4 my-2 rounded-2xl p-4 shadow-lg">
+        <View className="flex-row justify-between items-center">
           <View>
-            <Text style={styles.weatherTemp}>{Math.round(weatherData.main.temp)}°C</Text>
-            <Text style={styles.weatherDesc}>{weatherData.weather[0].description}</Text>
-            <Text style={styles.weatherLocation}>{weatherData.name}</Text>
+            <Text className="text-4xl font-bold text-white">{Math.round(weatherData.main.temp)}°C</Text>
+            <Text className="text-white text-lg capitalize">{weatherData.weather[0].description}</Text>
+            <Text className="text-white/80 text-base mt-1">{weatherData.name}</Text>
           </View>
-          <View>
+          <View className="bg-white/20 rounded-full p-2">
             <Image 
               source={{ uri: `https://openweathermap.org/img/wn/${weatherData.weather[0].icon}@4x.png` }}
-              style={styles.weatherIcon}
+              className="w-24 h-24"
             />
           </View>
         </View>
-        <View style={styles.weatherDetails}>
-          <View style={styles.weatherDetail}>
+        
+        <View className="flex-row justify-between mt-4 pt-3 border-t border-white/30">
+          <View className="flex-row items-center">
             <Ionicons name="water-outline" size={18} color="white" />
-            <Text style={styles.weatherDetailText}>{weatherData.main.humidity}%</Text>
+            <Text className="text-white ml-2">Humidity: {weatherData.main.humidity}%</Text>
           </View>
-          <View style={styles.weatherDetail}>
+          <View className="flex-row items-center">
             <FontAwesome5 name="wind" size={18} color="white" />
-            <Text style={styles.weatherDetailText}>{weatherData.wind.speed} m/s</Text>
+            <Text className="text-white ml-2">{weatherData.wind.speed} m/s</Text>
           </View>
-          <View style={styles.weatherDetail}>
-            <MaterialCommunityIcons name="weather-sunny" size={18} color="white" />
-            <Text style={styles.weatherDetailText}>
+          <View className="flex-row items-center">
+            <MaterialCommunityIcons name="weather-sunset-up" size={18} color="white" />
+            <Text className="text-white ml-2">
               {new Date(weatherData.sys.sunrise * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
             </Text>
           </View>
@@ -135,305 +144,245 @@ const Home = () => {
     );
   };
   
-  const StatCard = ({ icon, title, value, color }) => (
-    <View style={[styles.statCard, { borderLeftColor: color }]}>
-      <View style={[styles.statIconContainer, { backgroundColor: `${color}20` }]}>
+  const StatCard = ({ icon, title, value, color, bgColor }) => (
+    <View className={`flex-1 rounded-xl p-4 mx-1 shadow bg-white border-l-4 ${color}`}>
+      <View className={`w-12 h-12 rounded-full items-center justify-center mb-3 ${bgColor}`}>
         {icon}
       </View>
-      <View>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statTitle}>{title}</Text>
+      <Text className="text-xl font-bold text-gray-800">{value}</Text>
+      <Text className="text-gray-600">{title}</Text>
+    </View>
+  );
+  
+  const CafeCard = ({ cafe }) => (
+    <View className="bg-white rounded-xl overflow-hidden shadow-sm mb-3">
+      <Image 
+        source={{ uri: cafe.image }}
+        className="w-full h-40"
+        resizeMode="cover"
+      />
+      <View className="p-3">
+        <View className="flex-row justify-between items-center mb-2">
+          <Text className="text-lg font-bold text-gray-800">{cafe.name}</Text>
+          <View className="flex-row items-center">
+            <Ionicons name="star" size={16} color="#FFC107" />
+            <Text className="ml-1 text-gray-700">{cafe.rating}</Text>
+          </View>
+        </View>
+        <View className="flex-row items-center mb-2">
+          <Ionicons name="location-outline" size={16} color="#4f46e5" />
+          <Text className="text-gray-600 ml-1">{cafe.address}</Text>
+        </View>
+        <View className="flex-row justify-between items-center">
+          <Text className="text-gray-500 text-sm">{cafe.distance}</Text>
+          <TouchableOpacity className="bg-indigo-100 px-3 py-1 rounded-full">
+            <Text className="text-indigo-600 font-medium text-sm">Details</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
   
+  const fetchNearbyCafes = async () => {
+    try {
+      // Set loading state specifically for cafes section
+      setLoading(true);
+      
+      // Attempt to get location with better error handling
+      let location;
+      try {
+        location = await getClientLocation();
+        if (!location || !location.coords) {
+          throw new Error('Location unavailable');
+        }
+      } catch (locationError) {
+        console.error('Location error:', locationError);
+        // Use hardcoded coordinates as fallback (you can change these to your target area)
+        location = {
+          coords: {
+            latitude: 39.96939957261083,
+            longitude: 32.744049317303556
+          }
+        };
+        console.log('Using fallback coordinates');
+      }
+      
+      const { latitude, longitude } = location.coords;
+      console.log(`Fetching cafes at: Lat ${latitude}, Lon ${longitude}`);
+      
+      // Use direct fetch with more detailed error logging
+      try {
+        const response = await fetch(`https://cman.onrender.com/cafes/top5?lat=${latitude}&lon=${longitude}`);
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Cafe API response:', data);
+        
+        if (Array.isArray(data)) {
+          const cafesData = data.map(cafe => ({
+            id: cafe.id || cafe._id || String(Math.random()),
+            name: cafe.name || 'Unnamed Cafe',
+            distance: cafe.distance || `${(cafe.distanceInKm || 0).toFixed(1)} km`,
+            rating: cafe.rating || '4.0',
+            address: cafe.address || cafe.location || "Address unavailable",
+            image: cafe.image || cafe.imageUrl || 
+                  `https://source.unsplash.com/random/300x200/?cafe&sig=${Math.random()}`
+          }));
+          
+          setNearbyCafes(cafesData);
+          console.log(`Processed ${cafesData.length} cafes`);
+        } else {
+          // If API didn't return an array, set empty array instead of using fallback data
+          console.warn('API did not return an array');
+          setNearbyCafes([]);
+        }
+      } catch (apiError) {
+        console.error('API request failed:', apiError);
+        // Don't use sample data fallback anymore, just set empty array
+        setNearbyCafes([]);
+      }
+    } catch (error) {
+      console.error('Unexpected error in fetchNearbyCafes:', error);
+      setNearbyCafes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#5b6ceb" />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      <View className="flex-1 justify-center items-center bg-gray-50">
+        <ActivityIndicator size="large" color="#4f46e5" />
+        <Text className="mt-4 text-indigo-600 text-base">Loading dashboard...</Text>
       </View>
     );
   }
   
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
       
-      <View style={styles.header}>
+      <View className="flex-row justify-between items-center px-5 pt-4 pb-2">
         <View>
-          <Text style={styles.greeting}>Hello, Admin</Text>
-          <Text style={styles.subGreeting}>Welcome to your dashboard</Text>
+          <Text className="text-2xl font-bold text-gray-800">Hello, {userInfo.name.split(' ')[0]}</Text>
+          <Text className="text-gray-600 mt-1">Welcome to your dashboard</Text>
         </View>
-        <TouchableOpacity style={styles.profileButton}>
-          <Ionicons name="person-circle" size={40} color="#5b6ceb" />
+        <TouchableOpacity className="bg-indigo-100 p-2 rounded-full">
+          <Ionicons name="person-circle" size={36} color="#4f46e5" />
         </TouchableOpacity>
       </View>
       
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {renderWeatherInfo()}
         
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Overview</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAll}>See All</Text>
+        <View className="flex-row justify-between items-center px-5 mt-6 mb-2">
+          <Text className="text-xl font-bold text-gray-800">Today's Overview</Text>
+          <TouchableOpacity className="bg-indigo-50 px-3 py-1 rounded-full">
+            <Text className="text-indigo-600">See All</Text>
           </TouchableOpacity>
         </View>
         
-        <View style={styles.statsContainer}>
+        <View className="flex-row px-4 mb-3">
           <StatCard 
-            icon={<MaterialCommunityIcons name="cart-outline" size={24} color="#5b6ceb" />}
+            icon={<MaterialCommunityIcons name="cart-outline" size={24} color="#4f46e5" />}
             title="Sales"
             value={todayStats.salesCount}
-            color="#5b6ceb"
+            color="border-indigo-600"
+            bgColor="bg-indigo-100"
           />
           <StatCard 
-            icon={<MaterialCommunityIcons name="currency-usd" size={24} color="#28a745" />}
+            icon={<MaterialCommunityIcons name="currency-usd" size={24} color="#059669" />}
             title="Revenue"
             value={`$${todayStats.revenue.toLocaleString()}`}
-            color="#28a745"
+            color="border-emerald-600"
+            bgColor="bg-emerald-100"
           />
         </View>
         
-        <View style={styles.statsContainer}>
+        <View className="flex-row px-4 mb-4">
           <StatCard 
-            icon={<Ionicons name="people-outline" size={24} color="#fd7e14" />}
+            icon={<Ionicons name="people-outline" size={24} color="#ea580c" />}
             title="New Customers"
             value={todayStats.newCustomers}
-            color="#fd7e14"
+            color="border-orange-600"
+            bgColor="bg-orange-100"
           />
           <StatCard 
-            icon={<MaterialCommunityIcons name="clock-outline" size={24} color="#dc3545" />}
+            icon={<MaterialCommunityIcons name="clock-outline" size={24} color="#dc2626" />}
             title="Pending Orders"
             value={todayStats.pendingOrders}
-            color="#dc3545"
+            color="border-red-600"
+            bgColor="bg-red-100"
           />
         </View>
         
-        <View style={styles.actionButtons}>
+        {/* Nearby Cafes Section */}
+        <View className="flex-row justify-between items-center px-5 mt-6 mb-2">
+          <Text className="text-xl font-bold text-gray-800">Nearby Cafes</Text>
           <TouchableOpacity 
-            style={[styles.actionButton, styles.primaryButton]} 
+            className="bg-indigo-50 px-3 py-1 rounded-full"
+            onPress={fetchNearbyCafes}
+          >
+            <Text className="text-indigo-600">Refresh</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View className="px-4 mb-4">
+          {nearbyCafes.length > 0 ? (
+            nearbyCafes.map(cafe => (
+              <CafeCard key={cafe.id} cafe={cafe} />
+            ))
+          ) : (
+            <View className="bg-white rounded-xl p-6 items-center justify-center shadow-sm">
+              <Ionicons name="cafe-outline" size={32} color="#4f46e5" />
+              <Text className="text-gray-600 mt-2 text-center">
+                No cafes found nearby. Try refreshing the location.
+              </Text>
+            </View>
+          )}
+        </View>
+        
+        <View className="flex-row px-4 mt-2 mb-4">
+          <TouchableOpacity 
+            className="flex-1 mx-1 bg-indigo-600 rounded-xl py-3 px-4 flex-row items-center justify-center shadow-md"
             onPress={getIdToken}
           >
-            <Ionicons name="refresh" size={24} color="white" />
-            <Text style={styles.actionButtonText}>Refresh Data</Text>
+            <Ionicons name="refresh" size={22} color="white" />
+            <Text className="text-white font-bold ml-2">Refresh Data</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.actionButton, styles.successButton]} 
+            className="flex-1 mx-1 bg-emerald-600 rounded-xl py-3 px-4 flex-row items-center justify-center shadow-md"
             onPress={sendlocation}
           >
-            <Ionicons name="location" size={24} color="white" />
-            <Text style={styles.actionButtonText}>Send Location</Text>
+            <Ionicons name="location" size={22} color="white" />
+            <Text className="text-white font-bold ml-2">Send Location</Text>
           </TouchableOpacity>
         </View>
         
-        <View style={styles.infoContainer}>
-          <Text style={styles.infoTitle}>Authentication Info</Text>
-          <Text style={styles.infoText}>UID: {userInfo.uid || 'Not available'}</Text>
-          <Text style={styles.infoText}>Token Status: {userInfo.token ? 'Active' : 'Inactive'}</Text>
+        <View className="mx-4 mb-6 bg-white rounded-xl p-5 shadow-sm border-l-4 border-indigo-600">
+          <View className="flex-row items-center mb-3">
+            <Ionicons name="shield-checkmark" size={22} color="#4f46e5" />
+            <Text className="text-lg font-bold text-gray-800 ml-2">Authentication Info</Text>
+          </View>
+          <View className="bg-gray-50 p-3 rounded-lg">
+            <Text className="text-gray-700 mb-1">
+              <Text className="font-bold">Name:</Text> {userInfo.name || 'Not available'}
+            </Text>
+            <Text className="text-gray-700">
+              <Text className="font-bold">Token Status:</Text>{' '}
+              <Text className={userInfo.token ? 'text-emerald-600' : 'text-red-600'}>
+                {userInfo.token ? 'Active' : 'Inactive'}
+              </Text>
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#5b6ceb',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  subGreeting: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
-  },
-  profileButton: {
-    borderRadius: 20,
-  },
-  weatherCard: {
-    backgroundColor: '#4da7db', // Set a solid color instead of gradient
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginVertical: 8,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  weatherContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  weatherTemp: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  weatherDesc: {
-    fontSize: 16,
-    color: 'white',
-    textTransform: 'capitalize',
-  },
-  weatherLocation: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 4,
-  },
-  weatherIcon: {
-    width: 100,
-    height: 100,
-  },
-  weatherDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  weatherDetail: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  weatherDetailText: {
-    color: 'white',
-    marginLeft: 6,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  seeAll: {
-    fontSize: 14,
-    color: '#5b6ceb',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginVertical: 8,
-  },
-  statCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-    borderLeftWidth: 3,
-  },
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  statTitle: {
-    fontSize: 14,
-    color: '#666',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginVertical: 16,
-  },
-  actionButton: {
-    flex: 1,
-    marginHorizontal: 4,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  primaryButton: {
-    backgroundColor: '#5b6ceb',
-  },
-  successButton: {
-    backgroundColor: '#28a745',
-  },
-  actionButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  infoContainer: {
-    backgroundColor: 'white',
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#5b6ceb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#666',
-    marginVertical: 2,
-  },
-});
 
 export default Home;
