@@ -22,6 +22,8 @@ import orderIcon from "assets/icons/orderIcons.png";
 import productIcon from "assets/icons/productsIcon.png";
 import category from "assets/icons/category.png";
 import addProduct from "assets/icons/add-product.png";
+import mapIcon from "assets/icons/maps.png";
+import weatherIcon from "assets/icons/weather.png";
 
 
 
@@ -49,7 +51,9 @@ export default {
   orderIcon,
   productIcon,
   category,
-  addProduct
+  addProduct,
+  mapIcon,
+  weatherIcon,
 
  
 };

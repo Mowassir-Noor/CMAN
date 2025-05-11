@@ -31,7 +31,7 @@ const TabLayout = () => {
 
        
           screenOptions={{
-            tabBarActiveTintColor: "purple",
+            tabBarActiveTintColor: "#F9A826",
             tabBarInactiveTintColor: "#CDCDE0",
             tabBarHideOnKeyboard: true,
             tabBarShowLabel: false,
@@ -89,7 +89,7 @@ const TabLayout = () => {
               headerShown: false,
               tabBarIcon: ({ color, focused }) => (
                 <TabIcon
-                  icon={icons.orderIcon}
+                  icon={icons.mapIcon}
                   color={color}
                   name="Location"
                   focused={focused}
@@ -106,7 +106,7 @@ const TabLayout = () => {
                 <TabIcon
                   icon={icons.productIcon}
                   color={color}
-                  name="Products"
+                  name="devices"
                   focused={focused}
                 />
               ),
@@ -115,13 +115,13 @@ const TabLayout = () => {
           <Tabs.Screen
             name="analytics"
             options={{
-              title: "Analytics",
+              title: "Weather",
               headerShown: false,
               tabBarIcon: ({ color, focused }) => (
                 <TabIcon
-                  icon={icons.analyticsIcon}
+                  icon={icons.weatherIcon}
                   color={color}
-                  name="Analytics"
+                name="Weather"
                   focused={focused}
                 />
               ),

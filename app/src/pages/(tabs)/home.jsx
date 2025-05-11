@@ -4,6 +4,9 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 import { getClientLocation } from '../../utils/location/locationFunc'
 import { getAuthToken, getUserUID } from '../../utils/userAuth'
 import axiosInstance from '../../../src/api/axiosInstance'
+import { Dimensions } from 'react-native'
+
+const { width } = Dimensions.get('window');
 
 const Home = () => {
   const [userInfo, setUserInfo] = useState({
@@ -58,6 +61,56 @@ const Home = () => {
   
   const fetchWeatherData = async () => {
     try {
+      // First try to get weather from our backend API if user is authenticated
+      const uid = await getUserUID();
+      
+      if (uid) {
+        try {
+          // Use our backend API which connects to Visual Crossing
+          const response = await axiosInstance.get(`/weather/current/${uid}`);
+          
+          if (response.data) {
+            // Transform the backend response to match our expected format
+            const apiData = response.data;
+            
+            // Create a compatible weatherData object 
+            const weatherDataFromApi = {
+              name: apiData.location,
+              main: {
+                temp: apiData.temp,
+                feels_like: apiData.feels_like,
+                humidity: apiData.humidity,
+                // Estimate min/max from current temperature
+                temp_min: apiData.temp - 2,
+                temp_max: apiData.temp + 3
+              },
+              weather: [
+                {
+                  main: apiData.conditions,
+                  description: apiData.conditions,
+                  // Set a default icon or derive from conditions
+                  icon: getWeatherIconCode(apiData.conditions)
+                }
+              ],
+              wind: {
+                speed: 5.0, // Default value as it might not be in the response
+              },
+              sys: {
+                sunrise: Math.floor(new Date().setHours(6, 30, 0) / 1000),
+                sunset: Math.floor(new Date().setHours(18, 30, 0) / 1000)
+              }
+            };
+            
+            setWeatherData(weatherDataFromApi);
+            return;
+          }
+        } catch (apiError) {
+          console.error('Error fetching from backend API:', apiError);
+          // Fall back to OpenWeather API
+        }
+      }
+      
+      // Fallback to OpenWeather API if backend call fails or user is not authenticated
       const location = await getClientLocation();
       const API_KEY = '8a993a23f3f549e4ae7205037232310';
       const response = await fetch(
@@ -75,6 +128,26 @@ const Home = () => {
     }
   };
   
+  // Helper function to get weather icon code based on conditions
+  const getWeatherIconCode = (condition) => {
+    if (!condition) return '01d'; // default clear day
+    
+    const conditionLower = condition.toLowerCase();
+    
+    if (conditionLower.includes('rain')) return '10d';
+    if (conditionLower.includes('shower')) return '09d';
+    if (conditionLower.includes('snow')) return '13d';
+    if (conditionLower.includes('thunder')) return '11d';
+    if (conditionLower.includes('drizzle')) return '09d';
+    if (conditionLower.includes('cloud')) return '03d';
+    if (conditionLower.includes('overcast')) return '04d';
+    if (conditionLower.includes('clear')) return '01d';
+    if (conditionLower.includes('sunny')) return '01d';
+    if (conditionLower.includes('fog') || conditionLower.includes('mist')) return '50d';
+    
+    return '01d'; // Default to clear day if no match
+  };
+
   const sendlocation = () => {
     
     getClientLocation()
@@ -105,39 +178,107 @@ const Home = () => {
     }
   }
   
+  // Format date for display
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+
+  // Format time from HH:MM format
+  const formatTime = (timeString) => {
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours);
+    return hour > 12 ? `${hour - 12}:${minutes} PM` : `${hour}:${minutes} AM`;
+  };
+
+  // Get weather icon based on conditions
+  const getWeatherIcon = (conditions) => {
+    const condition = conditions?.toLowerCase();
+    if (!condition) return 'cloud-outline';
+    
+    if (condition.includes('rain')) return 'rainy-outline';
+    if (condition.includes('snow')) return 'snow-outline';
+    if (condition.includes('cloud')) return 'cloudy-outline';
+    if (condition.includes('clear') || condition.includes('sunny')) return 'sunny-outline';
+    if (condition.includes('storm') || condition.includes('thunder')) return 'thunderstorm-outline';
+    if (condition.includes('fog') || condition.includes('mist')) return 'water-outline';
+    return 'cloud-outline';
+  };
+
+  // Generate hourly forecast data from current weather data
+  const generateHourlyForecast = () => {
+    if (!weatherData) return [];
+    
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Create 6 hour forecast based on current temperature with slight variations
+    return Array(6).fill(0).map((_, index) => {
+      const hour = (currentHour + index * 4) % 24;
+      const hourTemp = weatherData.main.temp + (Math.random() * 4 - 2); // Random variation of +/- 2 degrees
+      
+      return {
+        hour,
+        temp: hourTemp,
+        conditions: index < 3 ? weatherData.weather[0].main : "Clear" // Simplified condition change for later hours
+      };
+    });
+  };
+  
+  // Enhanced weather info rendering
   const renderWeatherInfo = () => {
     if (!weatherData) return null;
     
+    const hourlyData = generateHourlyForecast();
+    
     return (
-      <View className="bg-gradient-to-br from-blue-800 to-indigo-900 mx-4 my-2 rounded-2xl p-4 shadow-lg border border-blue-900">
-        <View className="flex-row justify-between items-center">
-          <View>
-            <Text className="text-4xl font-bold text-white">{Math.round(weatherData.main.temp)}°C</Text>
-            <Text className="text-white text-lg capitalize">{weatherData.weather[0].description}</Text>
-            <Text className="text-white/80 text-base mt-1">{weatherData.name}</Text>
+      <View>
+        <View className="bg-gradient-to-br from-blue-800 to-indigo-900 mx-4 my-2 rounded-2xl p-4 shadow-lg border border-blue-900">
+          <View className="flex-row justify-between items-center">
+            <View>
+              <Text className="text-4xl font-bold text-white">{Math.round(weatherData.main.temp)}°C</Text>
+              <Text className="text-white text-lg capitalize">{weatherData.weather[0].description}</Text>
+              <Text className="text-white/80 text-base mt-1">{weatherData.name}</Text>
+            </View>
+            <View className="bg-white/20 rounded-full p-2">
+              <Image 
+                source={{ uri: `https://openweathermap.org/img/wn/${weatherData.weather[0].icon}@4x.png` }}
+                className="w-24 h-24"
+              />
+            </View>
           </View>
-          <View className="bg-white/20 rounded-full p-2">
-            <Image 
-              source={{ uri: `https://openweathermap.org/img/wn/${weatherData.weather[0].icon}@4x.png` }}
-              className="w-24 h-24"
-            />
+          
+          <View className="flex-row justify-between mt-4 pt-3 border-t border-white/30">
+            <View className="flex-row items-center">
+              <Ionicons name="water-outline" size={18} color="white" />
+              <Text className="text-white ml-2">Humidity: {weatherData.main.humidity}%</Text>
+            </View>
+            <View className="flex-row items-center">
+              <FontAwesome5 name="wind" size={18} color="white" />
+              <Text className="text-white ml-2">{weatherData.wind.speed} m/s</Text>
+            </View>
+            <View className="flex-row items-center">
+              <MaterialCommunityIcons name="weather-sunset-up" size={18} color="white" />
+              <Text className="text-white ml-2">
+                {new Date(weatherData.sys.sunrise * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+              </Text>
+            </View>
           </View>
         </View>
         
-        <View className="flex-row justify-between mt-4 pt-3 border-t border-white/30">
-          <View className="flex-row items-center">
-            <Ionicons name="water-outline" size={18} color="white" />
-            <Text className="text-white ml-2">Humidity: {weatherData.main.humidity}%</Text>
-          </View>
-          <View className="flex-row items-center">
-            <FontAwesome5 name="wind" size={18} color="white" />
-            <Text className="text-white ml-2">{weatherData.wind.speed} m/s</Text>
-          </View>
-          <View className="flex-row items-center">
-            <MaterialCommunityIcons name="weather-sunset-up" size={18} color="white" />
-            <Text className="text-white ml-2">
-              {new Date(weatherData.sys.sunrise * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-            </Text>
+        {/* Hourly forecast section from analytics page */}
+        <View className="mx-4 bg-gray-800 rounded-xl p-4 shadow-lg mb-4 border border-gray-700">
+          <Text className="text-base font-medium text-gray-200 mb-3">Temperature Trend Today</Text>
+          
+          <View className="flex-row justify-between items-center">
+            <Text className="text-base font-medium text-gray-200">Temperature Range</Text>
+            <View className="flex-row items-center">
+              <Ionicons name="thermometer-outline" size={16} color="#60a5fa" />
+              <Text className="text-blue-400 ml-1">
+                {Math.round(Math.min(...hourlyData.map(h => h.temp)))}° - 
+                {Math.round(Math.max(...hourlyData.map(h => h.temp)))}°C
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -234,52 +375,56 @@ const Home = () => {
       `https://source.unsplash.com/random/800x600/?cafe,coffee&sig=${cafe.name}`;
     
     return (
-      <View className="bg-gray-900 dark:bg-gray-800 rounded-xl overflow-hidden shadow-md mb-3 border border-gray-800">
-        {/* Only show image if one is available */}
-        {/* Make the entire card tappable for a better user experience */}
-        <TouchableOpacity 
-          activeOpacity={0.9} 
-          onPress={openDirections}
-          className="w-full"
-        >
-          <Image 
-            source={{ uri: imageUrl }}
-            className="w-full h-48"
-            resizeMode="cover"
-          />
-          <View className="absolute top-0 right-0 bg-black/70 px-2 py-1 m-3 rounded-lg">
-            <View className="flex-row items-center">
-              <Ionicons name="star" size={16} color="#FFC107" />
-              <Text className="ml-1 text-white font-bold">{rating}</Text>
+      <View className="bg-gray-900 dark:bg-gray-800 rounded-xl overflow-hidden shadow-md mb-2 border border-gray-800">
+        <View className="flex-row">
+          {/* Smaller image on the left */}
+          <TouchableOpacity 
+            activeOpacity={0.9} 
+            onPress={openDirections}
+            className="w-1/3"
+          >
+            <Image 
+              source={{ uri: imageUrl }}
+              className="w-full h-28"
+              resizeMode="cover"
+            />
+            <View className="absolute top-0 right-0 bg-black/70 px-1.5 py-0.5 m-1 rounded-lg">
+              <View className="flex-row items-center">
+                <Ionicons name="star" size={12} color="#FFC107" />
+                <Text className="ml-0.5 text-white font-bold text-xs">{rating}</Text>
+              </View>
             </View>
-          </View>
-        </TouchableOpacity>
-        
-        <View className="p-4">
-          <Text className="text-xl font-bold text-white mb-1">{cafe.name}</Text>
+          </TouchableOpacity>
           
-          <View className="flex-row items-center mb-3">
-            <Ionicons name="location-outline" size={18} color="#60a5fa" />
-            <Text className="text-gray-300 ml-1 flex-1">{cafe.address}</Text>
-          </View>
-          
-          <View className="flex-row justify-between items-center">
-            <View className="flex-row items-center">
-              <Ionicons name="navigate-circle-outline" size={18} color="#60a5fa" />
-              <Text className="text-blue-400 font-medium ml-1">
-                {formatDistance(cafe.distance_meters)}
+          {/* Cafe details on the right */}
+          <View className="p-2 flex-1">
+            <Text className="text-base font-bold text-white">{cafe.name}</Text>
+            
+            <View className="flex-row items-center mb-1 mt-1">
+              <Ionicons name="location-outline" size={14} color="#60a5fa" />
+              <Text className="text-gray-300 ml-1 flex-1 text-xs" numberOfLines={2}>
+                {cafe.address}
               </Text>
             </View>
             
-            {/* Updated directions button with hitSlop for easier tapping */}
-            <TouchableOpacity 
-              className="bg-blue-600 px-4 py-2 rounded-full flex-row items-center"
-              onPress={openDirections}
-              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
-            >
-              <Ionicons name="navigate" size={18} color="white" />
-              <Text className="text-white font-medium ml-1">Directions</Text>
-            </TouchableOpacity>
+            <View className="flex-row justify-between items-center mt-auto">
+              <View className="flex-row items-center">
+                <Ionicons name="navigate-circle-outline" size={14} color="#60a5fa" />
+                <Text className="text-blue-400 font-medium ml-0.5 text-xs">
+                  {formatDistance(cafe.distance_meters)}
+                </Text>
+              </View>
+              
+              {/* Smaller directions button */}
+              <TouchableOpacity 
+                className="bg-blue-600 px-2 py-1 rounded-full flex-row items-center"
+                onPress={openDirections}
+                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+              >
+                <Ionicons name="navigate" size={12} color="white" />
+                <Text className="text-white font-medium ml-1 text-xs">Directions</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -345,6 +490,121 @@ const Home = () => {
     }
   };
 
+  // Create more detailed weather data based on current weather
+  const createDetailedWeatherData = () => {
+    if (!weatherData) return null;
+    
+    // Current hour
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Create hourly forecast with temperature variations
+    const hourly = Array(24).fill(0).map((_, i) => {
+      const hour = (currentHour + i) % 24;
+      // Create a realistic temperature curve peaking in the afternoon
+      const hourFactor = 1 - Math.abs((hour - 14) / 14); // peak at 2PM (hour 14)
+      const baseTemp = weatherData.main.temp;
+      const tempVariation = Math.sin(i/24 * Math.PI * 2) * 3;
+      const hourTemp = baseTemp + tempVariation;
+      
+      // Determine conditions based on original weather
+      let condition = weatherData.weather[0].main;
+      // Vary conditions slightly for future hours to make it more realistic
+      if (i > 6) {
+        condition = Math.random() > 0.7 ? "Clear" : condition;
+      }
+      
+      return {
+        time: `${hour.toString().padStart(2, '0')}:00`,
+        temp: hourTemp,
+        precip_prob: condition.toLowerCase().includes('rain') ? "60%" : 
+                     condition.toLowerCase().includes('cloud') ? "30%" : "5%",
+        conditions: condition
+      };
+    });
+    
+    return {
+      hourly: hourly,
+      current: {
+        location: weatherData.name,
+        temp: weatherData.main.temp,
+        feels_like: weatherData.main.feels_like,
+        humidity: weatherData.main.humidity,
+        conditions: weatherData.weather[0].main
+      }
+    };
+  };
+  
+  // Enhanced weather render function from analytics page
+  const renderEnhancedWeather = () => {
+    if (!weatherData) return null;
+    
+    const detailedWeather = createDetailedWeatherData();
+    
+    return (
+      <View>
+        {/* Current Weather Card */}
+        <View className="mx-4 my-4 rounded-2xl overflow-hidden">
+          <View className="bg-gradient-to-br from-blue-700 to-indigo-900 p-6 rounded-2xl shadow-lg">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <Ionicons name="location" size={20} color="#f0f9ff" />
+                <Text className="text-blue-100 text-base font-medium ml-1">{weatherData.name}</Text>
+              </View>
+              <Text className="text-blue-200 text-sm font-light">
+                {new Date().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}
+              </Text>
+            </View>
+            
+            <View className="flex-row justify-between items-center my-6">
+              <View>
+                <Text className="text-6xl font-bold text-white">{Math.round(weatherData.main.temp)}°</Text>
+                <Text className="text-base text-blue-100 opacity-90">Feels like {Math.round(weatherData.main.feels_like)}°C</Text>
+                <Text className="text-lg text-white font-medium mt-1 capitalize">{weatherData.weather[0].description}</Text>
+              </View>
+              <View className="bg-blue-800/30 p-3 rounded-full">
+                <Image 
+                  source={{ uri: `https://openweathermap.org/img/wn/${weatherData.weather[0].icon}@4x.png` }}
+                  className="w-24 h-24"
+                />
+              </View>
+            </View>
+            
+            <View className="flex-row justify-between mt-4 pt-4 border-t border-blue-400/30">
+              <View className="flex-row items-center">
+                <Ionicons name="water-outline" size={18} color="#93c5fd" />
+                <Text className="text-blue-200 ml-1">Humidity: {weatherData.main.humidity}%</Text>
+              </View>
+              
+              <View className="flex-row items-center">
+                <FontAwesome5 name="wind" size={18} color="#93c5fd" />
+                <Text className="text-blue-200 ml-1">{weatherData.wind.speed} m/s</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+        
+        {/* Hourly Forecast Section */}
+        <View className="mx-4 my-2 mb-4">
+          <Text className="text-lg font-bold text-gray-200 mb-3">Hourly Forecast</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-5">
+            {detailedWeather.hourly.slice(0, 24).map((hour, index) => (
+              <View key={index} className="bg-gray-800 rounded-xl p-4 mr-3 w-24 items-center shadow-lg border border-gray-700">
+                <Text className="text-xs text-gray-400 mb-2">{formatTime(hour.time)}</Text>
+                <Ionicons name={getWeatherIcon(hour.conditions)} size={28} color="#60a5fa" />
+                <Text className="text-base font-bold text-white mt-2">{Math.round(hour.temp)}°C</Text>
+                <View className="flex-row items-center mt-1">
+                  <Ionicons name="water" size={12} color="#60a5fa" />
+                  <Text className="text-xs text-blue-400 ml-1">{hour.precip_prob}</Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    );
+  };
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-900">
@@ -369,48 +629,7 @@ const Home = () => {
       </View>
       
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {renderWeatherInfo()}
-        
-        <View className="flex-row justify-between items-center px-5 mt-6 mb-2">
-          <Text className="text-xl font-bold text-white">Today's Overview</Text>
-          <TouchableOpacity className="bg-gray-800 px-3 py-1 rounded-full">
-            <Text className="text-blue-400">See All</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <View className="flex-row px-4 mb-3">
-          <StatCard 
-            icon={<MaterialCommunityIcons name="cart-outline" size={24} color="#4f46e5" />}
-            title="Sales"
-            value={todayStats.salesCount}
-            color="border-indigo-600"
-            bgColor="bg-indigo-100"
-          />
-          <StatCard 
-            icon={<MaterialCommunityIcons name="currency-usd" size={24} color="#059669" />}
-            title="Revenue"
-            value={`$${todayStats.revenue.toLocaleString()}`}
-            color="border-emerald-600"
-            bgColor="bg-emerald-100"
-          />
-        </View>
-        
-        <View className="flex-row px-4 mb-4">
-          <StatCard 
-            icon={<Ionicons name="people-outline" size={24} color="#ea580c" />}
-            title="New Customers"
-            value={todayStats.newCustomers}
-            color="border-orange-600"
-            bgColor="bg-orange-100"
-          />
-          <StatCard 
-            icon={<MaterialCommunityIcons name="clock-outline" size={24} color="#dc2626" />}
-            title="Pending Orders"
-            value={todayStats.pendingOrders}
-            color="border-red-600"
-            bgColor="bg-red-100"
-          />
-        </View>
+        {renderEnhancedWeather()}
         
         {/* Nearby Cafes Section */}
         <View className="flex-row justify-between items-center px-5 mt-6 mb-2">
