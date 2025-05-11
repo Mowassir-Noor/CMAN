@@ -164,6 +164,68 @@ const Home = () => {
       }
     };
     
+    // Open Google Maps with directions - completely revised for better reliability
+    const openDirections = () => {
+      try {
+        console.log("Opening directions for:", cafe.name);
+        
+        // Use coordinates directly if available - most reliable method
+        if (cafe.coordinates || (cafe.lat && cafe.lng)) {
+          const lat = cafe.coordinates?.lat || cafe.lat;
+          const lng = cafe.coordinates?.lng || cafe.lng;
+          
+          if (lat && lng) {
+            const coordsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            console.log("Using coordinates URL:", coordsUrl);
+            Linking.openURL(coordsUrl);
+            return;
+          }
+        }
+        
+        // Next try using place_id if available in the google_maps_link
+        if (cafe.google_maps_link && cafe.google_maps_link.includes('place_id')) {
+          // Extract place_id from the URL
+          const placeIdMatch = cafe.google_maps_link.match(/place_id:([^&]+)/);
+          if (placeIdMatch && placeIdMatch[1]) {
+            const placeId = placeIdMatch[1];
+            const placeUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cafe.name)}&query_place_id=${placeId}`;
+            console.log("Using place_id URL:", placeUrl);
+            Linking.openURL(placeUrl);
+            return;
+          } else {
+            // If we can't extract the place_id, just use the original URL
+            console.log("Using original maps link");
+            Linking.openURL(cafe.google_maps_link);
+            return;
+          }
+        }
+        
+        // As a last resort, use the cafe name and address
+        useNameAndAddress();
+        
+      } catch (error) {
+        console.error("Error opening directions:", error);
+        // Fall back to name and address
+        useNameAndAddress();
+      }
+    };
+    
+    // Use cafe name and address for search
+    const useNameAndAddress = () => {
+      try {
+        // Create a search query with both name and address for better results
+        const searchQuery = `${cafe.name}, ${cafe.address}`;
+        const encodedQuery = encodeURIComponent(searchQuery);
+        const searchUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+        
+        console.log("Using search URL:", searchUrl);
+        Linking.openURL(searchUrl);
+      } catch (err) {
+        console.error("Error creating search URL:", err);
+        alert("Could not open maps. Please try again.");
+      }
+    };
+    
     // Generate random rating for cafes if not provided
     const rating = cafe.rating || (3.5 + Math.random() * 1.5).toFixed(1);
     
@@ -173,17 +235,24 @@ const Home = () => {
     
     return (
       <View className="bg-white rounded-xl overflow-hidden shadow-md mb-3">
-        <Image 
-          source={{ uri: imageUrl }}
-          className="w-full h-48"
-          resizeMode="cover"
-        />
-        <View className="absolute top-0 right-0 bg-black/50 px-2 py-1 m-3 rounded-lg">
-          <View className="flex-row items-center">
-            <Ionicons name="star" size={16} color="#FFC107" />
-            <Text className="ml-1 text-white font-bold">{rating}</Text>
+        {/* Make the entire card tappable for a better user experience */}
+        <TouchableOpacity 
+          activeOpacity={0.9} 
+          onPress={openDirections}
+          className="w-full"
+        >
+          <Image 
+            source={{ uri: imageUrl }}
+            className="w-full h-48"
+            resizeMode="cover"
+          />
+          <View className="absolute top-0 right-0 bg-black/50 px-2 py-1 m-3 rounded-lg">
+            <View className="flex-row items-center">
+              <Ionicons name="star" size={16} color="#FFC107" />
+              <Text className="ml-1 text-white font-bold">{rating}</Text>
+            </View>
           </View>
-        </View>
+        </TouchableOpacity>
         
         <View className="p-4">
           <Text className="text-xl font-bold text-gray-800 mb-1">{cafe.name}</Text>
@@ -201,16 +270,14 @@ const Home = () => {
               </Text>
             </View>
             
+            {/* Updated directions button with hitSlop for easier tapping */}
             <TouchableOpacity 
-              className="bg-indigo-100 px-4 py-2 rounded-full"
-              onPress={() => {
-                // Open Google Maps link if available
-                if (cafe.google_maps_link) {
-                  Linking.openURL(cafe.google_maps_link);
-                }
-              }}
+              className="bg-indigo-600 px-4 py-2 rounded-full flex-row items-center"
+              onPress={openDirections}
+              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
             >
-              <Text className="text-indigo-600 font-medium">Directions</Text>
+              <Ionicons name="navigate" size={18} color="white" />
+              <Text className="text-white font-medium ml-1">Directions</Text>
             </TouchableOpacity>
           </View>
         </View>
