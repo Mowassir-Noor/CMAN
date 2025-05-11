@@ -109,7 +109,7 @@ const Home = () => {
     if (!weatherData) return null;
     
     return (
-      <View className="bg-gradient-to-br from-blue-500 to-indigo-600 mx-4 my-2 rounded-2xl p-4 shadow-lg">
+      <View className="bg-gradient-to-br from-blue-800 to-indigo-900 mx-4 my-2 rounded-2xl p-4 shadow-lg border border-blue-900">
         <View className="flex-row justify-between items-center">
           <View>
             <Text className="text-4xl font-bold text-white">{Math.round(weatherData.main.temp)}°C</Text>
@@ -145,12 +145,12 @@ const Home = () => {
   };
   
   const StatCard = ({ icon, title, value, color, bgColor }) => (
-    <View className={`flex-1 rounded-xl p-4 mx-1 shadow bg-white border-l-4 ${color}`}>
+    <View className={`flex-1 rounded-xl p-4 mx-1 shadow bg-gray-800 border-l-4 ${color}`}>
       <View className={`w-12 h-12 rounded-full items-center justify-center mb-3 ${bgColor}`}>
         {icon}
       </View>
-      <Text className="text-xl font-bold text-gray-800">{value}</Text>
-      <Text className="text-gray-600">{title}</Text>
+      <Text className="text-xl font-bold text-white">{value}</Text>
+      <Text className="text-gray-400">{title}</Text>
     </View>
   );
   
@@ -234,7 +234,8 @@ const Home = () => {
       `https://source.unsplash.com/random/800x600/?cafe,coffee&sig=${cafe.name}`;
     
     return (
-      <View className="bg-white rounded-xl overflow-hidden shadow-md mb-3">
+      <View className="bg-gray-900 dark:bg-gray-800 rounded-xl overflow-hidden shadow-md mb-3 border border-gray-800">
+        {/* Only show image if one is available */}
         {/* Make the entire card tappable for a better user experience */}
         <TouchableOpacity 
           activeOpacity={0.9} 
@@ -246,7 +247,7 @@ const Home = () => {
             className="w-full h-48"
             resizeMode="cover"
           />
-          <View className="absolute top-0 right-0 bg-black/50 px-2 py-1 m-3 rounded-lg">
+          <View className="absolute top-0 right-0 bg-black/70 px-2 py-1 m-3 rounded-lg">
             <View className="flex-row items-center">
               <Ionicons name="star" size={16} color="#FFC107" />
               <Text className="ml-1 text-white font-bold">{rating}</Text>
@@ -255,24 +256,24 @@ const Home = () => {
         </TouchableOpacity>
         
         <View className="p-4">
-          <Text className="text-xl font-bold text-gray-800 mb-1">{cafe.name}</Text>
+          <Text className="text-xl font-bold text-white mb-1">{cafe.name}</Text>
           
           <View className="flex-row items-center mb-3">
-            <Ionicons name="location-outline" size={18} color="#4f46e5" />
-            <Text className="text-gray-600 ml-1 flex-1">{cafe.address}</Text>
+            <Ionicons name="location-outline" size={18} color="#60a5fa" />
+            <Text className="text-gray-300 ml-1 flex-1">{cafe.address}</Text>
           </View>
           
           <View className="flex-row justify-between items-center">
             <View className="flex-row items-center">
-              <Ionicons name="navigate-circle-outline" size={18} color="#4f46e5" />
-              <Text className="text-indigo-600 font-medium ml-1">
+              <Ionicons name="navigate-circle-outline" size={18} color="#60a5fa" />
+              <Text className="text-blue-400 font-medium ml-1">
                 {formatDistance(cafe.distance_meters)}
               </Text>
             </View>
             
             {/* Updated directions button with hitSlop for easier tapping */}
             <TouchableOpacity 
-              className="bg-indigo-600 px-4 py-2 rounded-full flex-row items-center"
+              className="bg-blue-600 px-4 py-2 rounded-full flex-row items-center"
               onPress={openDirections}
               hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
             >
@@ -346,24 +347,24 @@ const Home = () => {
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#4f46e5" />
-        <Text className="mt-4 text-indigo-600 text-base">Loading dashboard...</Text>
+      <View className="flex-1 justify-center items-center bg-gray-900">
+        <ActivityIndicator size="large" color="#60a5fa" />
+        <Text className="mt-4 text-blue-400 text-base">Loading dashboard...</Text>
       </View>
     );
   }
   
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+    <SafeAreaView className="flex-1 bg-gray-900">
+      <StatusBar barStyle="light-content" backgroundColor="#111827" />
       
       <View className="flex-row justify-between items-center px-5 pt-4 pb-2">
         <View>
-          <Text className="text-2xl font-bold text-gray-800">Hello, {userInfo.name.split(' ')[0]}</Text>
-          <Text className="text-gray-600 mt-1">Welcome to your dashboard</Text>
+          <Text className="text-2xl font-bold text-white">Hello, {userInfo.name.split(' ')[0]}</Text>
+          <Text className="text-gray-400 mt-1">Welcome to your dashboard</Text>
         </View>
-        <TouchableOpacity className="bg-indigo-100 p-2 rounded-full">
-          <Ionicons name="person-circle" size={36} color="#4f46e5" />
+        <TouchableOpacity className="bg-gray-800 p-2 rounded-full">
+          <Ionicons name="person-circle" size={36} color="#60a5fa" />
         </TouchableOpacity>
       </View>
       
@@ -371,9 +372,9 @@ const Home = () => {
         {renderWeatherInfo()}
         
         <View className="flex-row justify-between items-center px-5 mt-6 mb-2">
-          <Text className="text-xl font-bold text-gray-800">Today's Overview</Text>
-          <TouchableOpacity className="bg-indigo-50 px-3 py-1 rounded-full">
-            <Text className="text-indigo-600">See All</Text>
+          <Text className="text-xl font-bold text-white">Today's Overview</Text>
+          <TouchableOpacity className="bg-gray-800 px-3 py-1 rounded-full">
+            <Text className="text-blue-400">See All</Text>
           </TouchableOpacity>
         </View>
         
@@ -413,12 +414,12 @@ const Home = () => {
         
         {/* Nearby Cafes Section */}
         <View className="flex-row justify-between items-center px-5 mt-6 mb-2">
-          <Text className="text-xl font-bold text-gray-800">Nearby Cafes</Text>
+          <Text className="text-xl font-bold text-white">Nearby Cafes</Text>
           <TouchableOpacity 
-            className="bg-indigo-50 px-3 py-1 rounded-full"
+            className="bg-gray-800 px-3 py-1 rounded-full"
             onPress={fetchNearbyCafes}
           >
-            <Text className="text-indigo-600">Refresh</Text>
+            <Text className="text-blue-400">Refresh</Text>
           </TouchableOpacity>
         </View>
         
@@ -428,48 +429,48 @@ const Home = () => {
               <CafeCard key={cafe.id} cafe={cafe} />
             ))
           ) : (
-            <View className="bg-white rounded-xl p-6 items-center justify-center shadow-sm">
-              <Ionicons name="cafe-outline" size={32} color="#4f46e5" />
-              <Text className="text-gray-600 mt-2 text-center">
+            <View className="bg-gray-800 rounded-xl p-6 items-center justify-center shadow-sm border border-gray-700">
+              <Ionicons name="cafe-outline" size={32} color="#60a5fa" />
+              <Text className="text-gray-300 mt-2 text-center">
                 No cafes found nearby. Try refreshing the location.
               </Text>
             </View>
           )}
         </View>
         
-        <View className="flex-row px-4 mt-2 mb-4">
+        <View className="flex-row px-4 mt-1 mb-3">
           <TouchableOpacity 
-            className="flex-1 mx-1 bg-indigo-600 rounded-xl py-3 px-4 flex-row items-center justify-center shadow-md"
+            className="flex-1 mx-1 bg-blue-800 rounded-lg py-2 px-3 flex-row items-center justify-center shadow-md"
             onPress={getIdToken}
           >
-            <Ionicons name="refresh" size={22} color="white" />
-            <Text className="text-white font-bold ml-2">Refresh Data</Text>
+            <Ionicons name="refresh" size={18} color="white" />
+            <Text className="text-white font-medium ml-1.5 text-sm">Refresh Data</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            className="flex-1 mx-1 bg-emerald-600 rounded-xl py-3 px-4 flex-row items-center justify-center shadow-md"
+            className="flex-1 mx-1 bg-emerald-800 rounded-lg py-2 px-3 flex-row items-center justify-center shadow-md"
             onPress={sendlocation}
           >
-            <Ionicons name="location" size={22} color="white" />
-            <Text className="text-white font-bold ml-2">Send Location</Text>
+            <Ionicons name="location" size={18} color="white" />
+            <Text className="text-white font-medium ml-1.5 text-sm">Send Location</Text>
           </TouchableOpacity>
         </View>
         
-        <View className="mx-4 mb-6 bg-white rounded-xl p-5 shadow-sm border-l-4 border-indigo-600">
-          <View className="flex-row items-center mb-3">
-            <Ionicons name="shield-checkmark" size={22} color="#4f46e5" />
-            <Text className="text-lg font-bold text-gray-800 ml-2">Authentication Info</Text>
+        <View className="mx-4 mb-4 bg-gray-800 rounded-lg p-3 shadow-sm border-l-4 border-blue-600">
+          <View className="flex-row items-center mb-1.5">
+            <Ionicons name="shield-checkmark" size={18} color="#60a5fa" />
+            <Text className="text-base font-bold text-white ml-1.5">Authentication Info</Text>
           </View>
-          <View className="bg-gray-50 p-3 rounded-lg">
-            <Text className="text-gray-700 mb-1">
+          <View className="bg-gray-700/70 p-2 rounded-md">
+            <Text className="text-gray-300 text-xs mb-0.5">
               <Text className="font-bold">Name:</Text> {userInfo.name || 'Not available'}
             </Text>
-            <Text className="text-gray-700 mb-1">
+            <Text className="text-gray-300 text-xs mb-0.5">
               <Text className="font-bold">UID:</Text> {userInfo.uid ? userInfo.uid.slice(0, 10) + '...' : 'Not available'}
             </Text>
-            <Text className="text-gray-700">
+            <Text className="text-gray-300 text-xs">
               <Text className="font-bold">Token Status:</Text>{' '}
-              <Text className={userInfo.token ? 'text-emerald-600' : 'text-red-600'}>
+              <Text className={userInfo.token ? 'text-emerald-400' : 'text-red-400'}>
                 {userInfo.token ? 'Active' : 'Inactive'}
               </Text>
             </Text>
