@@ -1,62 +1,117 @@
-import { View, Text } from 'react-native'
-import React, { useEffect } from 'react'
-import { Dropdown } from 'react-native-element-dropdown';
-import { useState } from 'react';
-import axiosInstance from '../../api/axiosInstance';
+import React, { useEffect, useState } from 'react';
+import MapView, { Marker } from 'react-native-maps';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { getClientLocation } from '../../utils/location/locationFunc';
 
-const orders = () => {
-   const [value, setIsValue] = useState("");
-   const [isFocused, setIsFocused] = useState(false);
-   const [data, setData] = useState([]);
+export default function order() {
+  const [loading, setLoading] = React.useState(true);
+  const [location, setLocation] = React.useState(null);
+  const [nearbyCafes, setNearbyCafes] = useState([]);
+  
+  const getLocation = async () => {
+    setLoading(true);
+    const res = await getClientLocation();
+    if (res.success) {
+      setLocation({
+        latitude: res.data.latitude,
+        longitude: res.data.longitude,
+        latitudeDelta: 0.0092,
+        longitudeDelta: 0.0042,
+      });
+    } else {
+      console.error('Error getting location:', res.error);
+    }
+    setLoading(false);
+  };
 
-   useEffect(() => {
-     const fetchCategories = async () => {
-       try {
-         const response = await axiosInstance.get('category');
-         const categories = response.data.data.map(category => ({
-           label: category.name,
-           value: category.name
-         }));
-         setData(categories);
-       } catch (error) {
-         console.error(error);
-       }
-     };
+  const fetchNearbyCafes = async (lat, lng) => {
+    try {
+      // Note: You'll need to use your own Google Places API key
+      const apiKey = 'AIzaSyCHeFRcAEweDYb2nqDrwpWkVwQbeNTiUFs'; 
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=1500&type=cafe&key=${apiKey}`
+      );
+      const data = await response.json();
+      
+      if (data.status === 'OK') {
+        setNearbyCafes(data.results);
+      } else {
+        console.error('Error fetching nearby cafes:', data.status);
+      }
+    } catch (error) {
+      console.error('Error fetching nearby cafes:', error);
+    }
+  };
 
-     fetchCategories();
-   }, []);
+  useEffect(() => {
+    // Fetch location when component mounts
+    getLocation();
+  }, []);
 
-  //  const renderLabel = () => {
-  //   if(value || isFocused){
-  //     return(
-  //       <Text className="absolute top-0 left-0 bg-white px-2 text-blue-500">
-  //         Category
-  //       </Text>
-  //     );
-  //   }
-  //   return null;
-  // }
+  useEffect(() => {
+    // When location is updated, fetch nearby cafes
+    if (!loading && location && location.latitude && location.longitude) {
+      fetchNearbyCafes(location.latitude, location.longitude);
+    }
+  }, [loading, location]);
+
+  // We need to handle the case when location is null properly
+  const MapContent = () => {
+    if (!location) {
+      return (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text className="mt-2">Getting your location...</Text>
+        </View>
+      );
+    }
+
+    return (
+      <MapView 
+        style={StyleSheet.absoluteFillObject} 
+        provider={"google"} 
+        showsUserLocation 
+        showsMyLocationButton 
+        region={location}
+      >
+        {/* User's current location marker */}
+        <Marker
+          coordinate={{
+            latitude: location.latitude,
+            longitude: location.longitude,
+          }}
+          title="You are here"
+          pinColor="blue"
+        />
+        
+        {/* Nearby cafes markers */}
+        {nearbyCafes.map((cafe, index) => (
+          <Marker
+            key={index}
+            coordinate={{
+              latitude: cafe.geometry.location.lat,
+              longitude: cafe.geometry.location.lng,
+            }}
+            title={cafe.name}
+            description={cafe.vicinity}
+            pinColor="red"
+          />
+        ))}
+      </MapView>
+    );
+  };
 
   return (
-    <View className="p-4 bg-gray-100 min-h-full">
-      {/* {renderLabel()} */}
-      <Dropdown
-      className="border border-gray-300 rounded p-2 bg-white shadow-md"
-      data={data}
-      search
-      maxHeight={300}
-      labelField={"label"}
-      valueField={"value"}
-      placeholder={!isFocused?"Select Item":"..."}
-      searchPlaceholder='Search...'
-      value={value}
-      onFocus={()=>setIsFocused(true)}
-      onBlur={()=>setIsFocused(false)}
-      onChange={item=>{setIsValue(item.value);
-        setIsFocused(false);
-      }}/>
+    <View className="flex-1">
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text className="mt-2">Getting your location...</Text>
+        </View>
+      ) : (
+        <MapContent />
+      )}
     </View>
-  )
+  );
 }
 
-export default orders;
