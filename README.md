@@ -15,6 +15,10 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```bash
     npx expo start
    ```
+3. Change the firebaseConfig.js
+   ``` use your firebase config      ```
+4. go to app\src\pages\(tabs) search for api keys in all the files and use your api keys there
+   
 
 In the output, you'll find options to open the app in a
 
