@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import MapView, { Marker, Callout } from 'react-native-maps';
-import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity, Linking, Alert } from 'react-native';
 import { getClientLocation, getUserCity } from '../../utils/location/locationFunc';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
@@ -11,12 +11,6 @@ export default function Location() {
   const [nearbyCafes, setNearbyCafes] = useState([]);
   const [selectedPlaceType, setSelectedPlaceType] = useState('cafe');
   const [errorMsg, setErrorMsg] = useState(null);
-  const [defaultLocation, setDefaultLocation] = useState({
-    latitude: 40.7128, // New York City coordinates as fallback
-    longitude: -74.0060,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  });
   
   const getLocation = async () => {
     setLoading(true);
@@ -32,7 +26,7 @@ export default function Location() {
           latitudeDelta: 0.0092,
           longitudeDelta: 0.0042,
         };
-        console.log("Setting location:", newLocation);
+        console.log("Setting live location:", newLocation);
         setLocation(newLocation);
         
         // Get city information
@@ -43,14 +37,22 @@ export default function Location() {
       } else {
         console.error('Error getting location:', res.error);
         setErrorMsg(res.error || 'Location services unavailable');
-        // Use default location as fallback
-        setLocation(defaultLocation);
+        // Don't use default location - just show the error
+        setLocation(null);
+        // Prompt user to enable location services
+        Alert.alert(
+          "Location Required",
+          "This app needs your location to show nearby places. Please enable location services in your device settings.",
+          [
+            { text: "OK", onPress: () => console.log("OK Pressed") }
+          ]
+        );
       }
     } catch (error) {
       console.error('Error in location process:', error);
       setErrorMsg(error.message || 'Location error occurred');
-      // Use default location as fallback
-      setLocation(defaultLocation);
+      // Don't use default location
+      setLocation(null);
     } finally {
       setLoading(false);
     }
@@ -60,30 +62,6 @@ export default function Location() {
   const retryLocation = () => {
     setLoading(true);
     getLocation();
-  };
-
-  // Use current device location regardless of permission status
-  const useDefaultLocation = () => {
-    const newLocation = {
-      latitude: 40.7128,
-      longitude: -74.0060,
-      latitudeDelta: 0.0922,
-      longitudeDelta: 0.0421,
-    };
-    
-    console.log("Using default location:", newLocation);
-    setLocation(newLocation);
-    setCityInfo({
-      city: "New York",
-      country: "United States",
-      formattedAddress: "New York, United States"
-    });
-    
-    // Fetch nearby places for the default location
-    fetchNearbyPlaces(newLocation.latitude, newLocation.longitude, selectedPlaceType);
-    
-    // Clear error message since we're proceeding with default location
-    setErrorMsg(null);
   };
 
   const fetchNearbyPlaces = async (lat, lng, placeType = 'cafe') => {
@@ -173,6 +151,20 @@ export default function Location() {
         </View>
       );
     };
+    
+    // State to track selected place
+    const [selectedPlace, setSelectedPlace] = useState(null);
+    
+    // Function to handle marker press
+    const handleMarkerPress = (place) => {
+      setSelectedPlace(place);
+    };
+    
+    // Function to open Google Maps directions
+    const openDirections = (to) => {
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${to.lat},${to.lng}&travelmode=driving`;
+      Linking.openURL(url).catch(err => console.error('Error opening Google Maps:', err));
+    };
 
     return (
       <View className="flex-1">
@@ -199,6 +191,7 @@ export default function Location() {
             title="You are here"
             description={cityInfo ? cityInfo.formattedAddress : "Your current location"}
             pinColor="blue"
+            onPress={() => setSelectedPlace(null)} // Deselect any place when clicking on current location
           >
             <View className="bg-blue-500 p-2 rounded-full shadow-md">
               <Ionicons name="location" size={22} color="white" />
@@ -207,31 +200,53 @@ export default function Location() {
           
           {/* Nearby places markers */}
           {nearbyCafes.length > 0 ? (
-            nearbyCafes.map((place, index) => (
-              <Marker
-                key={index}
-                coordinate={{
-                  latitude: place.geometry.location.lat,
-                  longitude: place.geometry.location.lng,
-                }}
-                title={place.name}
-                description={place.vicinity}
-              >
-                {renderCustomMarker(place)}
-                <Callout tooltip>
-                  <View className="w-50 bg-white rounded-lg p-3 shadow-md">
-                    <Text className="text-sm font-bold mb-1">{place.name}</Text>
-                    <Text className="text-xs text-gray-500 mb-1">{place.vicinity}</Text>
-                    {place.rating && (
-                      <View className="flex-row items-center">
-                        <Ionicons name="star" size={16} color="#FFD700" />
-                        <Text className="text-xs ml-1 text-gray-700">{place.rating} ({place.user_ratings_total})</Text>
-                      </View>
-                    )}
+            nearbyCafes.map((place, index) => {
+              // Get icon details for this place
+              const placeType = place?.types?.[0] || selectedPlaceType;
+              const { icon, color, component: IconComponent } = getPlaceIconDetails(placeType);
+              
+              return (
+                <Marker
+                  key={index}
+                  coordinate={{
+                    latitude: place.geometry.location.lat,
+                    longitude: place.geometry.location.lng,
+                  }}
+                  title={place.name}
+                  description={place.vicinity}
+                  onPress={() => handleMarkerPress({
+                    id: place.place_id,
+                    name: place.name,
+                    vicinity: place.vicinity,
+                    lat: place.geometry.location.lat,
+                    lng: place.geometry.location.lng,
+                    place_id: place.place_id,
+                    rating: place.rating,
+                    type: placeType,
+                  })}
+                >
+                  <View className={`p-2 rounded-full shadow-md ${selectedPlace?.id === place.place_id ? 'bg-blue-500' : 'bg-white'}`}>
+                    <IconComponent 
+                      name={icon} 
+                      size={20} 
+                      color={selectedPlace?.id === place.place_id ? 'white' : color} 
+                    />
                   </View>
-                </Callout>
-              </Marker>
-            ))
+                  <Callout tooltip>
+                    <View className="w-50 bg-white rounded-lg p-3 shadow-md">
+                      <Text className="text-sm font-bold mb-1">{place.name}</Text>
+                      <Text className="text-xs text-gray-500 mb-1">{place.vicinity}</Text>
+                      {place.rating && (
+                        <View className="flex-row items-center">
+                          <Ionicons name="star" size={16} color="#FFD700" />
+                          <Text className="text-xs ml-1 text-gray-700">{place.rating} ({place.user_ratings_total})</Text>
+                        </View>
+                      )}
+                    </View>
+                  </Callout>
+                </Marker>
+              );
+            })
           ) : (
             <Marker
               coordinate={{
@@ -275,15 +290,44 @@ export default function Location() {
           </TouchableOpacity>
         </View>
         
-        {/* City info panel */}
-        {cityInfo && (
+        {/* Selected place panel */}
+        {selectedPlace && (
+          <View className="absolute bottom-20 left-4 right-4 bg-white bg-opacity-95 rounded-xl p-4 shadow-md">
+            <View className="flex-row justify-between items-center mb-2">
+              <Text className="text-lg font-bold text-gray-800" numberOfLines={1}>{selectedPlace.name}</Text>
+              <TouchableOpacity onPress={() => setSelectedPlace(null)}>
+                <Ionicons name="close-circle" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text className="text-sm text-gray-600 mb-3">{selectedPlace.vicinity}</Text>
+            
+            {selectedPlace.rating && (
+              <View className="flex-row items-center mb-3">
+                <Ionicons name="star" size={16} color="#FFD700" />
+                <Text className="text-sm ml-1">{selectedPlace.rating}</Text>
+              </View>
+            )}
+            
+            <TouchableOpacity 
+              className="bg-blue-500 py-3 rounded-lg items-center flex-row justify-center"
+              onPress={() => openDirections(selectedPlace)}
+            >
+              <Ionicons name="navigate" size={20} color="white" />
+              <Text className="text-white font-bold ml-2">Get Directions</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {/* City info panel - Move it up if there's a selected place */}
+        {cityInfo && !selectedPlace && (
           <View className="absolute bottom-6 left-4 right-4 bg-white bg-opacity-90 rounded-xl p-4 items-center shadow-md">
             <Text className="text-xs text-gray-500">You are in</Text>
             <Text className="text-xl font-bold text-gray-800">{cityInfo.city || cityInfo.region}</Text>
             <Text className="text-sm text-gray-600">{cityInfo.country}</Text>
           </View>
         )}
-
+        
         {/* Error message panel */}
         {errorMsg && (
           <View className="absolute top-1/4 left-4 right-4 bg-white bg-opacity-95 rounded-xl p-4 items-center shadow-md">
@@ -304,14 +348,19 @@ export default function Location() {
   const LocationErrorView = () => (
     <View className="flex-1 justify-center items-center p-5">
       <Ionicons name="location-off" size={50} color="#e74c3c" />
-      <Text className="text-xl font-bold text-red-500 mt-4">Location Services Unavailable</Text>
-      <Text className="text-base text-gray-600 text-center my-2 px-5">{errorMsg}</Text>
+      <Text className="text-xl font-bold text-red-500 mt-4">Location Services Required</Text>
+      <Text className="text-base text-gray-600 text-center my-2 px-5">
+        This app needs access to your live location. Please enable location services in your device settings.
+      </Text>
+      <Text className="text-sm text-gray-500 text-center mb-4">
+        {errorMsg}
+      </Text>
       
       <TouchableOpacity 
         className="bg-blue-500 py-3 px-10 rounded-lg mt-6"
         onPress={retryLocation}
       >
-        <Text className="text-white font-bold text-base">Retry</Text>
+        <Text className="text-white font-bold text-base">Retry with Live Location</Text>
       </TouchableOpacity>
     </View>
   );
