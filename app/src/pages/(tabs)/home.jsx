@@ -112,7 +112,7 @@ const Home = () => {
       
       // Fallback to OpenWeather API if backend call fails or user is not authenticated
       const location = await getClientLocation();
-      const API_KEY = '8a993a23f3f549e4ae7205037232310';
+      const API_KEY = 'YOUR_OPENWEATHER_API_KEY'; // Replace with your OpenWeather API key
       const response = await fetch(
         `https://api.openweathermap.org/data/2.5/weather?lat=${location.coords.latitude}&lon=${location.coords.longitude}&units=metric&appid=${API_KEY}`
       );

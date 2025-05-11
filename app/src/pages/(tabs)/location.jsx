@@ -67,7 +67,7 @@ export default function Location() {
   const fetchNearbyPlaces = async (lat, lng, placeType = 'cafe') => {
     try {
       // Note: You'll need to use your own Google Places API key
-      const apiKey = 'AIzaSyCHeFRcAEweDYb2nqDrwpWkVwQbeNTiUFs'; 
+      const apiKey = 'your_google_places_api_key'; 
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=1500&type=${placeType}&key=${apiKey}`
       );
