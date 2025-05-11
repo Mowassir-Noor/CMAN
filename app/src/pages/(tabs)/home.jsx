@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, ActivityIndicator, Linking } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons'
 import { getClientLocation } from '../../utils/location/locationFunc'
@@ -154,34 +154,69 @@ const Home = () => {
     </View>
   );
   
-  const CafeCard = ({ cafe }) => (
-    <View className="bg-white rounded-xl overflow-hidden shadow-sm mb-3">
-      <Image 
-        source={{ uri: cafe.image }}
-        className="w-full h-40"
-        resizeMode="cover"
-      />
-      <View className="p-3">
-        <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-lg font-bold text-gray-800">{cafe.name}</Text>
+  const CafeCard = ({ cafe }) => {
+    // Format distance to show in km with proper formatting
+    const formatDistance = (meters) => {
+      if (meters < 1000) {
+        return `${meters.toFixed(0)} m`;
+      } else {
+        return `${(meters / 1000).toFixed(1)} km`;
+      }
+    };
+    
+    // Generate random rating for cafes if not provided
+    const rating = cafe.rating || (3.5 + Math.random() * 1.5).toFixed(1);
+    
+    // Use a placeholder image if none is provided
+    const imageUrl = cafe.image || 
+      `https://source.unsplash.com/random/800x600/?cafe,coffee&sig=${cafe.name}`;
+    
+    return (
+      <View className="bg-white rounded-xl overflow-hidden shadow-md mb-3">
+        <Image 
+          source={{ uri: imageUrl }}
+          className="w-full h-48"
+          resizeMode="cover"
+        />
+        <View className="absolute top-0 right-0 bg-black/50 px-2 py-1 m-3 rounded-lg">
           <View className="flex-row items-center">
             <Ionicons name="star" size={16} color="#FFC107" />
-            <Text className="ml-1 text-gray-700">{cafe.rating}</Text>
+            <Text className="ml-1 text-white font-bold">{rating}</Text>
           </View>
         </View>
-        <View className="flex-row items-center mb-2">
-          <Ionicons name="location-outline" size={16} color="#4f46e5" />
-          <Text className="text-gray-600 ml-1">{cafe.address}</Text>
-        </View>
-        <View className="flex-row justify-between items-center">
-          <Text className="text-gray-500 text-sm">{cafe.distance}</Text>
-          <TouchableOpacity className="bg-indigo-100 px-3 py-1 rounded-full">
-            <Text className="text-indigo-600 font-medium text-sm">Details</Text>
-          </TouchableOpacity>
+        
+        <View className="p-4">
+          <Text className="text-xl font-bold text-gray-800 mb-1">{cafe.name}</Text>
+          
+          <View className="flex-row items-center mb-3">
+            <Ionicons name="location-outline" size={18} color="#4f46e5" />
+            <Text className="text-gray-600 ml-1 flex-1">{cafe.address}</Text>
+          </View>
+          
+          <View className="flex-row justify-between items-center">
+            <View className="flex-row items-center">
+              <Ionicons name="navigate-circle-outline" size={18} color="#4f46e5" />
+              <Text className="text-indigo-600 font-medium ml-1">
+                {formatDistance(cafe.distance_meters)}
+              </Text>
+            </View>
+            
+            <TouchableOpacity 
+              className="bg-indigo-100 px-4 py-2 rounded-full"
+              onPress={() => {
+                // Open Google Maps link if available
+                if (cafe.google_maps_link) {
+                  Linking.openURL(cafe.google_maps_link);
+                }
+              }}
+            >
+              <Text className="text-indigo-600 font-medium">Directions</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
   
   const fetchNearbyCafes = async () => {
     try {
@@ -197,7 +232,7 @@ const Home = () => {
         }
       } catch (locationError) {
         console.error('Location error:', locationError);
-        // Use hardcoded coordinates as fallback (you can change these to your target area)
+        // Use hardcoded coordinates as fallback
         location = {
           coords: {
             latitude: 39.96939957261083,
@@ -221,27 +256,17 @@ const Home = () => {
         const data = await response.json();
         console.log('Cafe API response:', data);
         
+        // Set cafe data directly without transforming, since the API already provides
+        // the correct format with address, distance_meters, etc.
         if (Array.isArray(data)) {
-          const cafesData = data.map(cafe => ({
-            id: cafe.id || cafe._id || String(Math.random()),
-            name: cafe.name || 'Unnamed Cafe',
-            distance: cafe.distance || `${(cafe.distanceInKm || 0).toFixed(1)} km`,
-            rating: cafe.rating || '4.0',
-            address: cafe.address || cafe.location || "Address unavailable",
-            image: cafe.image || cafe.imageUrl || 
-                  `https://source.unsplash.com/random/300x200/?cafe&sig=${Math.random()}`
-          }));
-          
-          setNearbyCafes(cafesData);
-          console.log(`Processed ${cafesData.length} cafes`);
+          setNearbyCafes(data);
+          console.log(`Processed ${data.length} cafes`);
         } else {
-          // If API didn't return an array, set empty array instead of using fallback data
           console.warn('API did not return an array');
           setNearbyCafes([]);
         }
       } catch (apiError) {
         console.error('API request failed:', apiError);
-        // Don't use sample data fallback anymore, just set empty array
         setNearbyCafes([]);
       }
     } catch (error) {
@@ -371,6 +396,9 @@ const Home = () => {
           <View className="bg-gray-50 p-3 rounded-lg">
             <Text className="text-gray-700 mb-1">
               <Text className="font-bold">Name:</Text> {userInfo.name || 'Not available'}
+            </Text>
+            <Text className="text-gray-700 mb-1">
+              <Text className="font-bold">UID:</Text> {userInfo.uid ? userInfo.uid.slice(0, 10) + '...' : 'Not available'}
             </Text>
             <Text className="text-gray-700">
               <Text className="font-bold">Token Status:</Text>{' '}
